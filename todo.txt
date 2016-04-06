@@ -1,2 +1,0 @@
-#1 - write tests for control and data packets
-#2 - merge different layers into one buffer 
