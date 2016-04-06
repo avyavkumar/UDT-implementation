@@ -78,7 +78,15 @@ char* ControlPacket::makePacket(char* ePayload, int size = 0)
   free(temp_1);
   free(temp_2);
 
-  //TODO - merge the layers into one concise buffer; preferably of type (void*) to manage endianness
+  std::bitset <128> tempo_1 (layers[0]);
+  std::bitset <128> tempo_2 (layers[1]);
+  std::bitset <128> tempo_3 (layers[2]);
+  std::bitset <128> tempo_4 (layers[3]);
+
+  tempo_1 <<= 96;
+  tempo_2 <<= 64;
+  tempo_3 <<= 32;
+  packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
 }
 
 /****************************************************************************/

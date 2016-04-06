@@ -30,7 +30,6 @@ m_timestamp(NULL),
 m_packetData(NULL),
 m_funcField(NULL),
 m_orderBit(NULL),
-m_packet(NULL)
 {
   for (int i = 0; i < 3; i++)
     layers[i] = 0;
@@ -115,7 +114,14 @@ char* DataPacket::makePacket(char* ePayload, int size = 0)
   free(temp_2);
   free(temp_3);
 
-  //TODO - merge the layers into one concise buffer; preferably of type (void*) to manage endianness
+  std::bitset <96> tempo_1 (layers[0]);
+  std::bitset <96> tempo_2 (layers[1]);
+  std::bitset <96> tempo_3 (layers[2]);
+  tempo_1 <<= 64;
+  tempo_2 <<= 32;
+  packet = tempo_1 | tempo_2 | tempo_3;
+
+  // TODO - Attach the payload at the end
 }
 
 /****************************************************************************/
@@ -126,7 +132,13 @@ char* DataPacket::makePacket(char* ePayload, int size = 0)
 
 int DataPacket::setPayload(void *poData)
 {
-  *m_packetData = *poData;
+  if (poData)
+  {
+    *m_packetData = *poData;
+    return 1;
+  }
+  else
+    return -1;
 }
 
 /****************************************************************************/

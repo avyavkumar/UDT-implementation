@@ -4,6 +4,8 @@
 
 class ControlPacket
 {
+private:
+  std::bitset <128> packet;
 
 protected:
   uint32_t *m_type;                           // type

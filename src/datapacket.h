@@ -7,13 +7,13 @@
 class DataPacket
 {
 private:
-  void *m_packet;
+  void *m_packetData;
+  std::bitset <96> packet;
 
 protected:
   uint32_t *m_sequence;                       // sequence number
   uint32_t *m_message;                        // message number
   uint32_t *m_timestamp;                      // timestamp information
-  uint32_t *m_packetData;                     // pointer to payload of the packet
   uint32_t *m_funcField;                      // function field
   uint32_t *m_orderBit;                       // order bit
   uint32_t layers[3];
