@@ -1,2 +1,1 @@
-# UDT-implementation
-A lightweight UDT protocol 
+A lightweight UDT protocol written in C++.
