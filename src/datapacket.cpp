@@ -1,6 +1,7 @@
 #include "datapacket.h"
 #include <cstring>
 #include <cstdlib>
+#include <bitset>
 
 // DATA PACKET FORMAT IS AS FOLLOWS
 
@@ -29,7 +30,7 @@ m_message(NULL),
 m_timestamp(NULL),
 m_packetData(NULL),
 m_funcField(NULL),
-m_orderBit(NULL),
+m_orderBit(NULL)
 {
   for (int i = 0; i < 3; i++)
     layers[i] = 0;

@@ -1,6 +1,7 @@
 #include "controlpacket.h"
 #include <cstring>
 #include <cstdlib>
+#include <bitset>
 
 // CONTROL PACKET FORMAT
 

@@ -1,6 +1,4 @@
 #include "packet.h"
-#include <cstdlib.h>
-#include <cstdio.h>
 
 class ControlPacket
 {
