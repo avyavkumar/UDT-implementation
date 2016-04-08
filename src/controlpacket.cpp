@@ -87,7 +87,7 @@ char* ControlPacket::makePacket(char* ePayload, int size = 0)
   tempo_1 <<= 96;
   tempo_2 <<= 64;
   tempo_3 <<= 32;
-  packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
+  m_packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
 }
 
 /****************************************************************************/
@@ -115,7 +115,7 @@ ControlPacketType ControlPacket::getType()
               break;
 
     case 4:   //0100 - Congestion Warning
-              return
+              return CONGESTION;
               break;
 
     case 1:   //0001 - Keep-alive

@@ -120,7 +120,7 @@ char* DataPacket::makePacket(char* ePayload, int size = 0)
   std::bitset <96> tempo_3 (layers[2]);
   tempo_1 <<= 64;
   tempo_2 <<= 32;
-  packet = tempo_1 | tempo_2 | tempo_3;
+  m_packet = tempo_1 | tempo_2 | tempo_3;
 
   // TODO - Attach the payload at the end
 }
