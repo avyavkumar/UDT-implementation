@@ -1,9 +1,8 @@
-#include "socket.h"
+//#include "socket.h"
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <vector>
 #include <algorithm>
-#include <stdio.h>
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>
@@ -13,6 +12,28 @@
 #include <arpa/inet.h>
 
 #define MAXSIZE 100
+
+enum IPVersion {ERR=0,IPv4, IPv6};
+
+class UDTSocket
+{
+protected:
+   uint64_t m_socketid;                                  // socket ID - needs to be set manually
+   struct sockaddr_in m_address;                         // struct containing info about socket address
+   IPVersion m_IPVersion;                                // IP version
+   std::vector<struct sockaddr*> m_storageSent;          // vector of all the connections made
+   std::vector<struct sockaddr_storage*> m_storageRecv;  // vector of all the connections made
+   uint32_t m_port;                                      // port
+
+public:
+  UDTSocket();
+  ~UDTSocket();
+  int setIPVersion(IPVersion version);
+  int newSocket(int type);
+  int bindSocket(int port);
+  int SendPacket(const struct sockaddr_in peer, char *buffer);
+  int ReceivePacket(char *buffer);
+};
 
 UDTSocket::UDTSocket():
 m_socketid(0),
@@ -107,12 +128,11 @@ int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer)
 int UDTSocket::ReceivePacket(char *buffer)
 {
   // TODO - Streamline with both IPv4 and IPv6
-  struct sockaddr_in client_address;
+  struct sockaddr_storage client_address;
   socklen_t addr_size = sizeof(client_address);
   try
   {
     int nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)&client_address, &addr_size);
-    std::cout << nBytes << std::endl;
     if (nBytes == -1)
       throw std::exception();
   }
@@ -127,6 +147,27 @@ int UDTSocket::ReceivePacket(char *buffer)
 
   // if (std::find(m_storageRecv.begin(), m_storageRecv.end(), client_address) != m_storageRecv.end())
   //   m_storageRecv.push_back(client_address);
+
+  return 0;
+}
+
+int main()
+{
+  UDTSocket *socket = new UDTSocket();
+  socket->setIPVersion(IPv4);
+  socket->newSocket(12);
+  char *buffer = (char *)malloc(MAXSIZE*sizeof(char));
+  strcpy(buffer,"checking_1");
+  struct sockaddr_in serverAddr;
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(2346);
+  serverAddr.sin_addr.s_addr = INADDR_ANY;
+  memset(serverAddr.sin_zero, '\0', sizeof (serverAddr.sin_zero));
+  socket->SendPacket(serverAddr,buffer);
+  strcpy(buffer,"checking_2");
+  socket->SendPacket(serverAddr,buffer);
+  strcpy(buffer,"checking_3");
+  socket->SendPacket(serverAddr,buffer);
 
   return 0;
 }
