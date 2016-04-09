@@ -1,9 +1,48 @@
+// #include "packet.h"
 // #include "datapacket.h"
 #include <cstring>
 #include <cstdlib>
 #include <bitset>
 #include <stdint.h>
 #include <iostream>
+
+// types of packets
+enum PacketType {DATA = 0x0, CONTROL = 0x8, ERROR};
+
+// types of subcategories in control packets
+enum ControlPacketType {HANDSHAKE, ACK, ACK2, NAK, KeepAlive, ShutDown, DropRequest, ERR, UNKNOWN, CONGESTION};
+
+#define MAXSIZE 128
+
+class DataPacket
+{
+private:
+  char *m_packet;
+  std::bitset <96> packet;
+
+protected:
+  uint32_t *m_sequence;                       // sequence number
+  uint32_t *m_message;                        // message number
+  uint32_t *m_timestamp;                      // timestamp information
+  char *m_packetData;                         // payload
+  uint32_t *m_funcField;                      // function field
+  uint32_t *m_orderBit;                       // order bit
+  uint32_t layers[3];
+
+public:
+  DataPacket();
+  ~DataPacket();
+
+  int getLength();
+  int makePacket(char *final_packet);
+  int setPayload(char *pData);
+  PacketType getFlag();
+  int setSequence(uint32_t *sequence);
+  int setMessage(uint32_t *message);
+  int setTimestamp(uint32_t *timestamp);
+  int setfuncField(uint32_t *funcField);
+  int setOrderBit(uint32_t *orderBit);
+};
 
 // DATA PACKET FORMAT IS AS FOLLOWS
 
@@ -253,4 +292,36 @@ int DataPacket::setOrderBit(uint32_t *orderBit)
   }
   else
     return -1;
+}
+
+int main()
+{
+  DataPacket *packet = new DataPacket();
+  uint32_t *m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *m_message = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+  char *m_payload = (char *)malloc(50*sizeof(char));
+  char *final_packet = (char *)malloc(62*sizeof(char));
+  strcpy(m_payload, "testing");
+
+  *m_sequence = 127;
+  *m_funcField = 2;
+  *m_orderBit = 1;
+  *m_message = 282;
+  *m_timestamp = 156;
+
+  packet->setPayload(m_payload);
+  packet->setSequence(m_sequence);
+  packet->setMessage(m_message);
+  packet->setTimestamp(m_timestamp);
+  packet->setfuncField(m_funcField);
+  packet->setOrderBit(m_orderBit);
+
+  int temp = packet->makePacket(final_packet);
+  std::cout << temp << std::endl;
+  for (int i = 0; i < temp; i++)
+    std::cout << final_packet[i] << std::endl;
+  return 0;
 }
