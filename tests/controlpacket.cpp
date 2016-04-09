@@ -1,10 +1,45 @@
-#include "controlpacket.h"
+// #include "packet.h"
+// #include "controlpacket.h"
 #include <cstring>
 #include <cstdlib>
 #include <bitset>
 #include <stdint.h>
 #include <stdlib.h>
 #include <iostream>
+
+// types of packets
+enum PacketType {DATA = 0x0, CONTROL = 0x8, ERROR};
+
+// types of subcategories in control packets
+enum ControlPacketType {HANDSHAKE, ACK, ACK2, NAK, KeepAlive, ShutDown, DropRequest, ERR, UNKNOWN, CONGESTION};
+
+class ControlPacket
+{
+private:
+  std::bitset <128> packet;
+  char *m_packet;
+
+protected:
+  uint32_t *m_type;                           // type
+  uint32_t *m_extendedtype;                   // extended type
+  uint32_t *m_subsequence;                    // sub-sequence number
+  uint32_t *m_timestamp;                      // timestamp information
+  uint32_t *m_controlInfo;                    // control information
+  uint32_t layers[4];
+
+public:
+  ControlPacket();
+  ~ControlPacket();
+
+  int makePacket(char *final_packet);
+  PacketType getFlag();
+  ControlPacketType getType();
+  int setType(uint32_t *type);
+  int setExtendedType(uint32_t *message);
+  int setSubsequence(uint32_t *funcField);
+  int setTimestamp(uint32_t *timestamp);
+  int setControlInfo(uint32_t *orderBit);
+};
 
 // CONTROL PACKET FORMAT
 
@@ -268,4 +303,30 @@ int ControlPacket::setControlInfo(uint32_t *controlinfo)
   }
   else
     return -1;
+}
+
+int main()
+{
+  ControlPacket *packet = new ControlPacket();
+  uint32_t *type = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *etype = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *sub = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *t = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *a = (uint32_t *)malloc(sizeof(uint32_t));
+  *type = 1;
+  *etype = 0x12;
+  *sub = 45;
+  *t = 82372;
+  *a = 7832;
+  packet->setType(type);
+  packet->setExtendedType(etype);
+  packet->setSubsequence(sub);
+  packet->setControlInfo(a);
+  packet->setTimestamp(t);
+  //std::cout << packet->getType() << std::endl;
+  char *s_packet = (char *)malloc(16*sizeof(char));
+  int temp = packet->makePacket(s_packet);
+  for (int i = 0; i < 16; i++)
+    std::cout << s_packet[i] << std::endl;
+  return 0;
 }

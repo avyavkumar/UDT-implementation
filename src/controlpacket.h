@@ -4,6 +4,7 @@ class ControlPacket
 {
 private:
   std::bitset <128> packet;
+  char *m_packet;
 
 protected:
   uint32_t *m_type;                           // type
@@ -17,10 +18,10 @@ public:
   ControlPacket();
   ~ControlPacket();
 
-  void makePacket(PacketType eType, uint32_t* ePayload, int size = 0);
-  PacketType getFlag() const;
+  int makePacket(char *final_packet);
+  PacketType getFlag();
   ControlPacketType getType();
-  int setType(uint32_t *sequence);
+  int setType(uint32_t *type);
   int setExtendedType(uint32_t *message);
   int setSubsequence(uint32_t *funcField);
   int setTimestamp(uint32_t *timestamp);
