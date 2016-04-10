@@ -1,6 +1,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+/****************************************************************************/
+/*                          HandShakePacket()                               */
+/*                            Constructor                                   */
+/****************************************************************************/
+
 HandShakePacket::HandShakePacket():
 m_Version(0),
 m_Type(0),
@@ -13,6 +18,11 @@ m_ID(0),
    for (int i = 0; i < 4; ++ i)
       m_piPeerIP[i] = 0;
 }
+
+/****************************************************************************/
+/*                                 pack()                                   */
+/*              Packs the attributes of the handshaking packet              */
+/****************************************************************************/
 
 int HandShakePacket::pack(char* buf, int& size)
 {
@@ -34,6 +44,11 @@ int HandShakePacket::pack(char* buf, int& size)
 
    return 0;
 }
+
+/****************************************************************************/
+/*                                unpack()                                  */
+/*              Unacks the attributes of the handshaking packet             */
+/****************************************************************************/
 
 int HandShakePacket::unpack(const char* buf, int size)
 {

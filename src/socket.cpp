@@ -14,6 +14,11 @@
 
 #define MAXSIZE 100
 
+/****************************************************************************/
+/*                            UDTSocket()                                   */
+/*                            Constructor                                   */
+/****************************************************************************/
+
 UDTSocket::UDTSocket():
 m_socketid(0),
 m_address(),
@@ -21,6 +26,11 @@ m_storageSent(),
 m_IPVersion(ERR),
 m_storageRecv(),
 m_port(0) {}
+
+/****************************************************************************/
+/*                            UDTSocket()                                   */
+/*                            Destructor                                    */
+/****************************************************************************/
 
 UDTSocket::~UDTSocket()
 {}
@@ -35,6 +45,12 @@ int UDTSocket::setIPVersion(IPVersion version)
   else
     return -1;
 }
+
+/****************************************************************************/
+/*                            newSocket()                                   */
+/*         Initialise the socket interface at a specified port              */
+/*            Returns -1 if unsuccessful; 0 if successful                   */
+/****************************************************************************/
 
 int UDTSocket::newSocket(int port)
 {
@@ -61,6 +77,12 @@ int UDTSocket::newSocket(int port)
   return 0;
 }
 
+/****************************************************************************/
+/*                            bindSocket()                                  */
+/*             Bind the socket interface at a specified port                */
+/*             Returns -1 if unsuccessful; 0 if successful                  */
+/****************************************************************************/
+
 int UDTSocket::bindSocket(int port)
 {
   socklen_t size = sizeof(m_address);
@@ -79,6 +101,12 @@ int UDTSocket::bindSocket(int port)
   }
   return 0;
 }
+
+/****************************************************************************/
+/*                            SendPacket()                                  */
+/*               Send data to a specified peer address                      */
+/*       Returns -1 if unsuccessful; number of bytes sent if successful     */
+/****************************************************************************/
 
 int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer)
 {
@@ -101,8 +129,14 @@ int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer)
   // if (std::find(m_storageSent.begin(), m_storageSent.end(), peer) != m_storageSent.end())
   //   m_storageSent.push_back(peer);
 
-  return 0;
+  return nBytes;
 }
+
+/****************************************************************************/
+/*                            ReceivePacket()                               */
+/*               Receive data from any packet at a socket                   */
+/*            Returns -1 if unsuccessful; bytes received if successful      */
+/****************************************************************************/
 
 int UDTSocket::ReceivePacket(char *buffer)
 {
@@ -112,7 +146,6 @@ int UDTSocket::ReceivePacket(char *buffer)
   try
   {
     int nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)&client_address, &addr_size);
-    std::cout << nBytes << std::endl;
     if (nBytes == -1)
       throw std::exception();
   }
@@ -128,5 +161,5 @@ int UDTSocket::ReceivePacket(char *buffer)
   // if (std::find(m_storageRecv.begin(), m_storageRecv.end(), client_address) != m_storageRecv.end())
   //   m_storageRecv.push_back(client_address);
 
-  return 0;
+  return nBytes;
 }
