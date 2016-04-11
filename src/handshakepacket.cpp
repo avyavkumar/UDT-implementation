@@ -68,3 +68,8 @@ int HandShakePacket::unpack(const char* buf, int size)
 
    return 0;
 }
+
+int HandShakePacket::makePacket(char *packet)
+{
+
+}

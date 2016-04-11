@@ -125,10 +125,10 @@ int DataPacket::makePacket(char *final_packet)
   uint32_t *temp_3 = (uint32_t *)malloc(sizeof(uint32_t));
   *temp_1 = (*m_funcField & 0x0003) << 30;
   *temp_2 = (*m_orderBit & 0x0001) << 29;
-  *temp_3 =  0x1FFF & *m_message;
+  *temp_3 =  0x1FFFFFFF & *m_message;
   *temp_1 = *temp_1 | *temp_2 | *temp_3;
 
-  layers[0] = 0x7FFF & *m_sequence;
+  layers[0] = 0x7FFFFFFF & *m_sequence;
   layers[1] = *temp_1;
   layers[2] = *m_timestamp;
 
@@ -139,11 +139,14 @@ int DataPacket::makePacket(char *final_packet)
   std::bitset <96> tempo_1 (layers[0]);
   std::bitset <96> tempo_2 (layers[1]);
   std::bitset <96> tempo_3 (layers[2]);
+  std::cout << tempo_1 << std::endl;
+  std::cout << tempo_2 << std::endl;
+  std::cout << tempo_3 << std::endl;
   tempo_1 <<= 64;
   tempo_2 <<= 32;
   int length = 0;
   packet = tempo_1 | tempo_2 | tempo_3;
-
+  std::cout << packet << std::endl;
   for (int i = 0; i < 12; i++)
   {
     std::bitset<8> c;

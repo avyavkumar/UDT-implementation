@@ -86,10 +86,10 @@ int DataPacket::makePacket(char *final_packet)
   uint32_t *temp_3 = (uint32_t *)malloc(sizeof(uint32_t));
   *temp_1 = (*m_funcField & 0x0003) << 30;
   *temp_2 = (*m_orderBit & 0x0001) << 29;
-  *temp_3 =  0x1FFF & *m_message;
+  *temp_3 =  0x1FFFFFFF & *m_message;
   *temp_1 = *temp_1 | *temp_2 | *temp_3;
 
-  layers[0] = 0x7FFF & *m_sequence;
+  layers[0] = 0x7FFFFFFF & *m_sequence;
   layers[1] = *temp_1;
   layers[2] = *m_timestamp;
 

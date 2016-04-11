@@ -1,4 +1,3 @@
-#include "socket.h"
 #include <sys/types.h>
 #include <ifaddrs.h>
 #include <vector>
@@ -11,8 +10,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#define MAXSIZE 100
 
 /****************************************************************************/
 /*                            UDTSocket()                                   */
@@ -52,13 +49,13 @@ int UDTSocket::setIPVersion(IPVersion version)
 /*            Returns -1 if unsuccessful; 0 if successful                   */
 /****************************************************************************/
 
-int UDTSocket::newSocket(int port)
+int UDTSocket::newSocket(int family, int port)
 {
   m_port = port;
   /*Create UDP socket*/
   try
   {
-    m_socketid = socket(AF_INET, SOCK_DGRAM, 0);
+    m_socketid = socket(AF_INET, family, 0);
     if (m_socketid == -1)
       throw std::exception();
   }
@@ -112,9 +109,10 @@ int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer)
 {
   // TODO - Streamline with both IPv4 and IPv6
   socklen_t addr_size = sizeof(peer);
+  int nBytes;
   try
   {
-    int nBytes = sendto(m_socketid,buffer,strlen(buffer),0,(struct sockaddr *)&peer,addr_size);
+    nBytes = sendto(m_socketid,buffer,strlen(buffer),0,(struct sockaddr *)&peer,addr_size);
     if (nBytes == -1)
       throw std::exception();
   }
@@ -143,9 +141,14 @@ int UDTSocket::ReceivePacket(char *buffer)
   // TODO - Streamline with both IPv4 and IPv6
   struct sockaddr_in client_address;
   socklen_t addr_size = sizeof(client_address);
+  int nBytes;
   try
   {
-    int nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)&client_address, &addr_size);
+    struct timeval timeout;
+    timeout.tv_sec = 10;                                    // timeout after 10 seconds
+    timeout.tv_usec = 0;
+    setsockopt(m_socketid, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(struct timeval));
+    nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)&client_address, &addr_size);
     if (nBytes == -1)
       throw std::exception();
   }
@@ -156,10 +159,9 @@ int UDTSocket::ReceivePacket(char *buffer)
     return -1;
   }
 
+  return nBytes;
   // maintain bookkeeping data of the received data
 
   // if (std::find(m_storageRecv.begin(), m_storageRecv.end(), client_address) != m_storageRecv.end())
   //   m_storageRecv.push_back(client_address);
-
-  return nBytes;
 }

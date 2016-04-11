@@ -105,15 +105,16 @@ int ControlPacket::makePacket(char *final_packet)
   // make a temporary string for the first row of the control packet
   uint32_t *temp_1 = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *temp_2 = (uint32_t *)malloc(sizeof(uint32_t));
-  *temp_1 = (*m_type << 16) | 0x8000;
-  *temp_2 = *m_extendedtype & 0x00FF;
-  *temp_1 = *temp_1 | *temp_2;
+  *temp_1 = (*m_type << 16) | 0x80000000;
 
+  *temp_2 = *m_extendedtype & 0x0000FFFF;
+  *temp_1 = *temp_1 | *temp_2;
   layers[0] = *temp_1;
   layers[1] = *m_subsequence;
   layers[2] = *m_timestamp;
   layers[3] = *m_controlInfo;
-
+  std::bitset <32> te (layers[0]);
+  std::cout << te << std::endl;
   free(temp_1);
   free(temp_2);
 
@@ -121,12 +122,20 @@ int ControlPacket::makePacket(char *final_packet)
   std::bitset <128> tempo_2 (layers[1]);
   std::bitset <128> tempo_3 (layers[2]);
   std::bitset <128> tempo_4 (layers[3]);
-
+  std::cout << *m_type << std::endl;
+  std::cout << *m_extendedtype << std::endl;
+  std::cout << tempo_1 << std::endl;
   tempo_1 <<= 96;
   tempo_2 <<= 64;
   tempo_3 <<= 32;
   packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
   int length = 0;
+  std::cout << tempo_1 << std::endl;
+  std::cout << tempo_2 << std::endl;
+  std::cout << tempo_3 << std::endl;
+  std::cout << tempo_4 << std::endl;
+
+  std::cout << packet << std::endl;
   for (int i = 0; i < 16; i++)
   {
     std::bitset<8> c;

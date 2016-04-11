@@ -1,5 +1,7 @@
 enum IPVersion {ERR=0,IPv4, IPv6};
 
+#define MAXSIZE 10000
+
 class UDTSocket
 {
 protected:
@@ -14,7 +16,7 @@ public:
   UDTSocket();
   ~UDTSocket();
   int setIPVersion(IPVersion version);
-  int newSocket(int type);
+  int newSocket(int family, int port);
   int SendPacket(const struct sockaddr_in peer, char *buffer);
   int bindSocket(int port);
   int ReceivePacket(char *buffer);

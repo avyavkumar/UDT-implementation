@@ -70,8 +70,8 @@ int ControlPacket::makePacket(char *final_packet)
   // make a temporary string for the first row of the control packet
   uint32_t *temp_1 = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *temp_2 = (uint32_t *)malloc(sizeof(uint32_t));
-  *temp_1 = (*m_type << 16) | 0x8000;
-  *temp_2 = *m_extendedtype & 0x00FF;
+  *temp_1 = (*m_type << 16) | 0x80000000;
+  *temp_2 = *m_extendedtype & 0x0000FFFF;
   *temp_1 = *temp_1 | *temp_2;
 
   layers[0] = *temp_1;
