@@ -40,7 +40,9 @@ int CCC::init(Role eRole)
       if (err_code != -1)
         break;
     } while(1);
-
+    // If packet is handshaking type and contains relevant stuff
+    // sendPossible++
+    // recvPossible++
   }
   else if (eRole == SERVER)
   {

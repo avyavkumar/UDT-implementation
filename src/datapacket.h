@@ -1,7 +1,5 @@
 #include "packet.h"
 
-#define MAXSIZE 128
-
 class DataPacket
 {
 private:

@@ -1,6 +1,6 @@
 enum IPVersion {ERR=0,IPv4, IPv6};
 
-#define MAXSIZE 10000
+#define MAXSIZE 508
 
 class UDTSocket
 {

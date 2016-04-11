@@ -1,4 +1,4 @@
-// #include "datapacket.h"
+#include "datapacket.h"
 #include <cstring>
 #include <cstdlib>
 #include <bitset>
@@ -115,13 +115,13 @@ int DataPacket::makePacket(char *final_packet)
     length++;
   }
 
-  for (int i = 0; i < strlen(m_packetData); i++)
+  for (int i = 0; i < sizeof(m_packetData); i++)
     *(m_packet + 12 + i) = *(m_packetData + i);
 
-  for (int i = 0; i < 12+strlen(m_packetData); i++)
+  for (int i = 0; i < 12+sizeof(m_packetData); i++)
     *(final_packet + i) = *(m_packet + i);
 
-  return length+strlen(m_packetData);
+  return length+sizeof(m_packetData);
 }
 
 /****************************************************************************/
@@ -134,7 +134,7 @@ int DataPacket::setPayload(char *poData)
 {
   if (poData)
   {
-    int length = strlen(poData);
+    int length = sizeof(poData);
     m_packetData = (char *)malloc(length*sizeof(char));
     m_packet = (char *)malloc((12+length)*sizeof(char));
     for (int i = 0; i < length; i++)
