@@ -1,10 +1,11 @@
+#include "packet.h"
+
 class HandShakePacket
 {
 public:
    HandShakePacket();
    int pack(char* buf, int& size);
    int unpack(const char* buf, int size);
-   int HandShakePacket::makePacket(char *packet)  // make the packet; copy with (char*)
    int32_t m_Version;                             // UDT version
    int32_t m_Type;                                // UDT socket type
    int32_t m_ISN;                                 // random initial sequence number
