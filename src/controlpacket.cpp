@@ -144,11 +144,11 @@ int ControlPacket::extractPacket(char *final_packet)
 }
 
 /****************************************************************************/
-/*                              getType()                                   */
+/*                              getPacketType()                             */
 /*                   Returns the type of control packet                     */
 /****************************************************************************/
 
-ControlPacketType ControlPacket::getType()
+ControlPacketType ControlPacket::getPacketType()
 {
   switch (*m_type)
   {
@@ -303,6 +303,46 @@ int ControlPacket::setControlInfo(uint32_t *controlinfo)
     *m_controlInfo = *controlinfo;
     return 1;
   }
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getType()
+{
+  if (m_type)
+    return *m_type;
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getExtendedType()
+{
+  if (m_extendedtype)
+    return *m_extendedtype;
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getSubsequence()
+{
+  if (m_subsequence)
+    return *m_subsequence;
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getTimestamp()
+{
+  if (m_timestamp)
+    return *m_timestamp;
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getControlInfo()
+{
+  if (m_controlInfo)
+    return *m_controlInfo;
   else
     return -1;
 }

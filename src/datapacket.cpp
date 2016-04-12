@@ -99,9 +99,6 @@ int DataPacket::makePacket(char *final_packet)
   free(temp_2);
   free(temp_3);
 
-  std::cout << "LAYERS" << std::endl;
-  for (int i = 0; i < 3; i++)
-    std::cout << layers[i] << std::endl;
   std::bitset <96> tempo_1 (layers[0]);
   std::bitset <96> tempo_2 (layers[1]);
   std::bitset <96> tempo_3 (layers[2]);
@@ -287,9 +284,6 @@ int DataPacket::extractPacket(char *final_packet, int length)
     layer++;
     j+=4;
   }
-  std::cout << "FORMATTED LAYERS" << std::endl;
-  for (int i = 0; i < 3; i++)
-    std::cout << layers[i] << std::endl;
   *m_sequence = layers[0] & 0x7FFFFFFF;
   *m_funcField = (layers[1] & 0xC0000000) >> 30;
   *m_orderBit = (layers[1] & 0x20000000) >> 29;
@@ -300,4 +294,44 @@ int DataPacket::extractPacket(char *final_packet, int length)
   for (int i = 0; i < length-12; i++)
     *(m_packetData + i) = *(final_packet + 12 + i);
   return 1;
+}
+
+uint32_t getSequence()
+{
+  if (m_sequence)
+    return *m_sequence;
+  else
+    return -1;
+}
+
+uint32_t getfuncField()
+{
+  if (m_funcField)
+    return *m_funcField;
+  else
+    return -1;
+}
+
+uint32_t getOrderBit()
+{
+  if (m_orderBit)
+    return *m_orderBit;
+  else
+    return -1;
+}
+
+uint32_t getMessage()
+{
+  if (m_message)
+    return *m_message;
+  else
+    return -1;
+}
+
+uint32_t getTimestamp()
+{
+  if (m_timestamp)
+    return *m_timestamp;
+  else
+    return -1;
 }

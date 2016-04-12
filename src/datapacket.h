@@ -15,7 +15,7 @@ protected:
   char *m_packetData;                         // payload
   uint32_t *m_funcField;                      // function field
   uint32_t *m_orderBit;                       // order bit
-  uint32_t *m_length;
+  uint32_t *m_length;                         // length of the payload
   uint32_t layers[3];
 
 public:
@@ -32,4 +32,9 @@ public:
   int setfuncField(uint32_t *funcField);
   int setOrderBit(uint32_t *orderBit);
   int extractPacket(char *final_packet, int length);
+  uint32_t getSequence();
+  uint32_t getfuncField();
+  uint32_t getOrderBit();
+  uint32_t getTimestamp();
+  uint32_t getMessage();
 };
