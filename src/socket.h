@@ -1,6 +1,18 @@
 enum IPVersion {Err=0,IPv4, IPv6};
 
 #define MAXSIZE 508
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <vector>
+#include <algorithm>
+#include <stdio.h>
+#include <iostream>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 class UDTSocket
 {
@@ -17,7 +29,7 @@ public:
   ~UDTSocket();
   int setIPVersion(IPVersion version);
   int newSocket(int family, int port);
-  int SendPacket(const struct sockaddr_in peer, char *buffer);
+  int SendPacket(const struct sockaddr_in peer, char *buffer, int length);
   int bindSocket(int port);
   int ReceivePacket(char *buffer);
 };

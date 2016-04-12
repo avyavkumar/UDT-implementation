@@ -1,15 +1,4 @@
-#include <sys/types.h>
-#include <ifaddrs.h>
-#include <vector>
-#include <algorithm>
-#include <stdio.h>
-#include <iostream>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include "socket.h"
 
 /****************************************************************************/
 /*                            UDTSocket()                                   */
@@ -105,14 +94,14 @@ int UDTSocket::bindSocket(int port)
 /*       Returns -1 if unsuccessful; number of bytes sent if successful     */
 /****************************************************************************/
 
-int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer)
+int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer, int length)
 {
   // TODO - Streamline with both IPv4 and IPv6
   socklen_t addr_size = sizeof(peer);
   int nBytes;
   try
   {
-    nBytes = sendto(m_socketid,buffer,strlen(buffer),0,(struct sockaddr *)&peer,addr_size);
+    nBytes = sendto(m_socketid,buffer,length,0,(struct sockaddr *)&peer,addr_size);
     if (nBytes == -1)
       throw std::exception();
   }

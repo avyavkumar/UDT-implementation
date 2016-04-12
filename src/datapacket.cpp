@@ -1,10 +1,4 @@
 #include "datapacket.h"
-#include <cstring>
-#include <cstdlib>
-#include <bitset>
-#include <stdint.h>
-#include <iostream>
-#include <stdio.h>
 
 // DATA PACKET FORMAT IS AS FOLLOWS
 
@@ -39,6 +33,12 @@ m_length(NULL)
 {
   for (int i = 0; i < 3; i++)
     layers[i] = 0;
+  m_length = (uint32_t *)malloc(sizeof(uint32_t));
+  m_message = (uint32_t *)malloc(sizeof(uint32_t));
+  m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
+  m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+  m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
+  m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
 }
 
 /****************************************************************************/
@@ -136,10 +136,9 @@ int DataPacket::setPayload(char *poData, int length)
 {
   if (poData)
   {
-    m_length = (uint32_t *)malloc(sizeof(uint32_t));
-    *m_length = length;
     m_packetData = (char *)malloc(length*sizeof(char));
     m_packet = (char *)malloc((12+length)*sizeof(char));
+    *m_length = length;
     for (int i = 0; i < length; i++)
       *(m_packetData + i) = *(poData + i);
     return 1;
@@ -170,7 +169,6 @@ int DataPacket::setSequence(uint32_t *sequence)
 {
   if (sequence)
   {
-    m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
     *m_sequence = *sequence;
     return 1;
   }
@@ -190,7 +188,6 @@ int DataPacket::setTimestamp(uint32_t *timestamp)
 {
   if (timestamp)
   {
-    m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
     *m_timestamp = *timestamp;
     return 1;
   }
@@ -210,7 +207,6 @@ int DataPacket::setfuncField(uint32_t *funcField)
 {
   if (funcField)
   {
-    m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
     *m_funcField = *funcField;
     return 1;
   }
@@ -230,7 +226,6 @@ int DataPacket::setMessage(uint32_t *message)
 {
   if (message)
   {
-    m_message = (uint32_t *)malloc(sizeof(uint32_t));
     *m_message = *message;
     return 1;
   }
@@ -250,7 +245,6 @@ int DataPacket::setOrderBit(uint32_t *orderBit)
 {
   if (orderBit)
   {
-    m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
     *m_orderBit = *orderBit;
     return 1;
   }
@@ -270,7 +264,6 @@ int DataPacket::extractPacket(char *final_packet, int length)
 {
   if (!final_packet)
     return -1;
-  int final_size = length/4 + 1;
   uint32_t *layers = (uint32_t *)malloc(3*sizeof(uint32_t));
   char *temp = (char *)malloc(4*sizeof(char));
   int j = 0;
@@ -289,14 +282,18 @@ int DataPacket::extractPacket(char *final_packet, int length)
   *m_orderBit = (layers[1] & 0x20000000) >> 29;
   *m_message = (layers[1] & 0x1FFFFFFF);
   *m_timestamp = layers[2];
-  free(m_packetData);
+  if (m_packetData)
+    free(m_packetData);
   m_packetData = (char *)malloc((length-12)*sizeof(char));
+  if (m_packet)
+    free(m_packet);
+  m_packet = (char *)malloc(length*sizeof(char));
   for (int i = 0; i < length-12; i++)
     *(m_packetData + i) = *(final_packet + 12 + i);
   return 1;
 }
 
-uint32_t getSequence()
+uint32_t DataPacket::getSequence()
 {
   if (m_sequence)
     return *m_sequence;
@@ -304,7 +301,7 @@ uint32_t getSequence()
     return -1;
 }
 
-uint32_t getfuncField()
+uint32_t DataPacket::getfuncField()
 {
   if (m_funcField)
     return *m_funcField;
@@ -312,7 +309,7 @@ uint32_t getfuncField()
     return -1;
 }
 
-uint32_t getOrderBit()
+uint32_t DataPacket::getOrderBit()
 {
   if (m_orderBit)
     return *m_orderBit;
@@ -320,7 +317,7 @@ uint32_t getOrderBit()
     return -1;
 }
 
-uint32_t getMessage()
+uint32_t DataPacket::getMessage()
 {
   if (m_message)
     return *m_message;
@@ -328,7 +325,7 @@ uint32_t getMessage()
     return -1;
 }
 
-uint32_t getTimestamp()
+uint32_t DataPacket::getTimestamp()
 {
   if (m_timestamp)
     return *m_timestamp;

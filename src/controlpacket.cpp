@@ -1,10 +1,4 @@
 #include "controlpacket.h"
-#include <cstring>
-#include <cstdlib>
-#include <bitset>
-#include <stdint.h>
-#include <stdlib.h>
-#include <iostream>
 
 // CONTROL PACKET FORMAT
 
@@ -39,6 +33,11 @@ m_controlInfo(NULL)
   m_packet = (char *)malloc(16*sizeof(char));
   for (int i = 0; i < 4; i++)
     layers[i] = 0;
+  m_type = (uint32_t *)malloc(sizeof(uint32_t));
+  m_extendedtype = (uint32_t *)malloc(sizeof(uint32_t));
+  m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+  m_subsequence = (uint32_t *)malloc(sizeof(uint32_t));
+  m_controlInfo = (uint32_t *)malloc(sizeof(uint32_t));
 }
 
 /****************************************************************************/
@@ -133,8 +132,6 @@ int ControlPacket::extractPacket(char *final_packet)
     layer++;
     j+=4;
   }
-  for (int i = 0; i < 4; i++)
-    std::cout << layers[i] << std::endl;
   *m_type = (layers[0] & 0x7FFF0000) >> 16;
   *m_extendedtype = layers[0] & 0x0000FFFF;
   *m_subsequence = layers[1] & 0x7FFFFFFF;
@@ -219,7 +216,6 @@ int ControlPacket::setType(uint32_t *type)
 {
   if (type)
   {
-    m_type = (uint32_t *)malloc(sizeof(uint32_t));
     *m_type = *type;
     return 1;
   }
@@ -239,7 +235,6 @@ int ControlPacket::setExtendedType(uint32_t *extendedtype)
 {
   if (extendedtype)
   {
-    m_extendedtype = (uint32_t *)malloc(sizeof(uint32_t));
     *m_extendedtype = *extendedtype;
     return 1;
   }
@@ -259,7 +254,6 @@ int ControlPacket::setTimestamp(uint32_t *timestamp)
 {
   if (timestamp)
   {
-    m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
     *m_timestamp = *timestamp;
     return 1;
   }
@@ -279,7 +273,6 @@ int ControlPacket::setSubsequence(uint32_t *subsequence)
 {
   if (subsequence)
   {
-    m_subsequence = (uint32_t *)malloc(sizeof(uint32_t));
     *m_subsequence = *subsequence;
     return 1;
   }
@@ -299,7 +292,6 @@ int ControlPacket::setControlInfo(uint32_t *controlinfo)
 {
   if (controlinfo)
   {
-    m_controlInfo = (uint32_t *)malloc(sizeof(uint32_t));
     *m_controlInfo = *controlinfo;
     return 1;
   }

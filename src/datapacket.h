@@ -1,4 +1,10 @@
 #include "packet.h"
+#include <cstring>
+#include <cstdlib>
+#include <bitset>
+#include <stdint.h>
+#include <iostream>
+#include <stdio.h>
 
 #define MAXSIZE 508
 
