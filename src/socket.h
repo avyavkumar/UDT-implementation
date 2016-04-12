@@ -1,4 +1,4 @@
-enum IPVersion {ERR=0,IPv4, IPv6};
+enum IPVersion {Err=0,IPv4, IPv6};
 
 #define MAXSIZE 508
 

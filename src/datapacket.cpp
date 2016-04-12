@@ -4,6 +4,7 @@
 #include <bitset>
 #include <stdint.h>
 #include <iostream>
+#include <stdio.h>
 
 // DATA PACKET FORMAT IS AS FOLLOWS
 
@@ -33,7 +34,8 @@ m_timestamp(NULL),
 m_packetData(NULL),
 m_funcField(NULL),
 m_orderBit(NULL),
-m_packet(NULL)
+m_packet(NULL),
+m_length(NULL)
 {
   for (int i = 0; i < 3; i++)
     layers[i] = 0;
@@ -55,7 +57,7 @@ DataPacket::~DataPacket() {}
 int DataPacket::getLength()
 {
   if (m_packetData)
-    return sizeof(m_packetData);
+    return *m_length;
   else
     return -1;
 }
@@ -97,6 +99,9 @@ int DataPacket::makePacket(char *final_packet)
   free(temp_2);
   free(temp_3);
 
+  std::cout << "LAYERS" << std::endl;
+  for (int i = 0; i < 3; i++)
+    std::cout << layers[i] << std::endl;
   std::bitset <96> tempo_1 (layers[0]);
   std::bitset <96> tempo_2 (layers[1]);
   std::bitset <96> tempo_3 (layers[2]);
@@ -115,13 +120,13 @@ int DataPacket::makePacket(char *final_packet)
     length++;
   }
 
-  for (int i = 0; i < sizeof(m_packetData); i++)
+  for (int i = 0; i < *m_length; i++)
     *(m_packet + 12 + i) = *(m_packetData + i);
 
-  for (int i = 0; i < 12+sizeof(m_packetData); i++)
+  for (int i = 0; i < 12+*m_length; i++)
     *(final_packet + i) = *(m_packet + i);
 
-  return length+sizeof(m_packetData);
+  return length+*m_length;
 }
 
 /****************************************************************************/
@@ -130,11 +135,12 @@ int DataPacket::makePacket(char *final_packet)
 /*          Pointer passed can be freed once the assignment is done         */
 /****************************************************************************/
 
-int DataPacket::setPayload(char *poData)
+int DataPacket::setPayload(char *poData, int length)
 {
   if (poData)
   {
-    int length = sizeof(poData);
+    m_length = (uint32_t *)malloc(sizeof(uint32_t));
+    *m_length = length;
     m_packetData = (char *)malloc(length*sizeof(char));
     m_packet = (char *)malloc((12+length)*sizeof(char));
     for (int i = 0; i < length; i++)
@@ -253,4 +259,45 @@ int DataPacket::setOrderBit(uint32_t *orderBit)
   }
   else
     return -1;
+}
+
+/****************************************************************************/
+/*                             extractPacket()                              */
+/*         Issues a new data packet out of a given character string         */
+/*            Existing values of parameters will be overridden              */
+/*         Pointer passed can be freed once the assignment is done          */
+/*          If the packet is formatted successfully, 1 is returned          */
+/****************************************************************************/
+
+int DataPacket::extractPacket(char *final_packet, int length)
+{
+  if (!final_packet)
+    return -1;
+  int final_size = length/4 + 1;
+  uint32_t *layers = (uint32_t *)malloc(3*sizeof(uint32_t));
+  char *temp = (char *)malloc(4*sizeof(char));
+  int j = 0;
+  int copy = 0;
+  int layer = 0;
+  while (j < 12)
+  {
+    for (int i = 0; i < 4; i++)
+      *(temp + i) = *(final_packet + i + j);
+    memcpy(layers + (2-layer), temp, 4);
+    layer++;
+    j+=4;
+  }
+  std::cout << "FORMATTED LAYERS" << std::endl;
+  for (int i = 0; i < 3; i++)
+    std::cout << layers[i] << std::endl;
+  *m_sequence = layers[0] & 0x7FFFFFFF;
+  *m_funcField = (layers[1] & 0xC0000000) >> 30;
+  *m_orderBit = (layers[1] & 0x20000000) >> 29;
+  *m_message = (layers[1] & 0x1FFFFFFF);
+  *m_timestamp = layers[2];
+  free(m_packetData);
+  m_packetData = (char *)malloc((length-12)*sizeof(char));
+  for (int i = 0; i < length-12; i++)
+    *(m_packetData + i) = *(final_packet + 12 + i);
+  return 1;
 }

@@ -20,7 +20,7 @@ UDTSocket::UDTSocket():
 m_socketid(0),
 m_address(),
 m_storageSent(),
-m_IPVersion(ERR),
+m_IPVersion(Err),
 m_storageRecv(),
 m_port(0) {}
 
@@ -34,7 +34,7 @@ UDTSocket::~UDTSocket()
 
 int UDTSocket::setIPVersion(IPVersion version)
 {
-  if (version != ERR)
+  if (version != Err)
   {
     m_IPVersion = version;
     return 1;

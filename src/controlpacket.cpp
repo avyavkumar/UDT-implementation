@@ -106,6 +106,43 @@ int ControlPacket::makePacket(char *final_packet)
   return 1;
 }
 
+
+/****************************************************************************/
+/*                             extractPacket()                              */
+/*         Issues a new data packet out of a given character string         */
+/*            Existing values of parameters will be overridden              */
+/*         Pointer passed can be freed once the assignment is done          */
+/*          If the packet is formatted successfully, 1 is returned          */
+/****************************************************************************/
+
+int ControlPacket::extractPacket(char *final_packet)
+{
+  if (!final_packet)
+    return -1;
+  int final_size = 4;
+  uint32_t *layers = (uint32_t *)malloc(4*sizeof(uint32_t));
+  char *temp = (char *)malloc(4*sizeof(char));
+  int j = 0;
+  int copy = 0;
+  int layer = 0;
+  while (j < 16)
+  {
+    for (int i = 0; i < 4; i++)
+      *(temp + i) = *(final_packet + i + j);
+    memcpy(layers + (3-layer), temp, 4);
+    layer++;
+    j+=4;
+  }
+  for (int i = 0; i < 4; i++)
+    std::cout << layers[i] << std::endl;
+  *m_type = (layers[0] & 0x7FFF0000) >> 16;
+  *m_extendedtype = layers[0] & 0x0000FFFF;
+  *m_subsequence = layers[1] & 0x7FFFFFFF;
+  *m_timestamp = layers[2];
+  *m_controlInfo = layers[3];
+  return 1;
+}
+
 /****************************************************************************/
 /*                              getType()                                   */
 /*                   Returns the type of control packet                     */
