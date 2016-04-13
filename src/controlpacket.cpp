@@ -12,6 +12,8 @@
 /*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
 /*   |                          Time Stamp                           |      */
 /*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
+/*   |                          Socket ID                            |      */
+/*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
 /*   |                     Control Information                       |      */
 /*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
 /*                                                                          */
@@ -28,16 +30,31 @@ m_type(NULL),
 m_extendedtype(NULL),
 m_timestamp(NULL),
 m_subsequence(NULL),
-m_controlInfo(NULL)
+m_socketID(NULL)
 {
-  m_packet = (char *)malloc(16*sizeof(char));
-  for (int i = 0; i < 4; i++)
+  m_packet = (char *)malloc(40*sizeof(char));
+  for (int i = 0; i < 10; i++)
     layers[i] = 0;
   m_type = (uint32_t *)malloc(sizeof(uint32_t));
   m_extendedtype = (uint32_t *)malloc(sizeof(uint32_t));
   m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   m_subsequence = (uint32_t *)malloc(sizeof(uint32_t));
-  m_controlInfo = (uint32_t *)malloc(sizeof(uint32_t));
+  m_socketID = (uint32_t *)malloc(sizeof(uint32_t));
+  m_packetSeq = (uint32_t *)malloc(sizeof(uint32_t));
+  m_RTT = (uint32_t *)malloc(sizeof(uint32_t));
+  m_RTTVar = (uint32_t *)malloc(sizeof(uint32_t));
+  m_availBuffer = (uint32_t *)malloc(sizeof(uint32_t));
+  m_packRecvRate = (uint32_t *)malloc(sizeof(uint32_t));
+  m_linkCap = (uint32_t *)malloc(sizeof(uint32_t));
+  m_Version = (uint32_t *)malloc(sizeof(uint32_t));
+  m_Type = (uint32_t *)malloc(sizeof(uint32_t));
+  m_ISN = (uint32_t *)malloc(sizeof(uint32_t));
+  m_MSS = (uint32_t *)malloc(sizeof(uint32_t));
+  m_FlightFlagSize = (uint32_t *)malloc(sizeof(uint32_t));
+  m_ReqType = (uint32_t *)malloc(sizeof(uint32_t));
+  m_LossInfo = (uint32_t *)malloc(sizeof(uint32_t));
+  m_firstMessage = (uint32_t *)malloc(sizeof(uint32_t));
+  m_lastMessage = (uint32_t *)malloc(sizeof(uint32_t));
 }
 
 /****************************************************************************/
@@ -56,7 +73,7 @@ ControlPacket::~ControlPacket() {}
 
 int ControlPacket::makePacket(char *final_packet)
 {
-  if (!m_type || !m_extendedtype || !m_timestamp || !m_subsequence || !m_controlInfo)
+  if (!m_type || !m_extendedtype || !m_timestamp || !m_subsequence || !m_socketID)
     return -1;
 
   // set the type as data; make the first bit of the packet 1
@@ -76,33 +93,211 @@ int ControlPacket::makePacket(char *final_packet)
   layers[0] = *temp_1;
   layers[1] = *m_subsequence;
   layers[2] = *m_timestamp;
-  layers[3] = *m_controlInfo;
+  layers[3] = *m_socketID;
+
+  std::bitset <320> tempo_0 (layers[0]);
+  std::bitset <320> tempo_1 (layers[1]);
+  std::bitset <320> tempo_2 (layers[2]);
+  std::bitset <320> tempo_3 (layers[3]);
 
   free(temp_1);
   free(temp_2);
 
-  std::bitset <128> tempo_1 (layers[0]);
-  std::bitset <128> tempo_2 (layers[1]);
-  std::bitset <128> tempo_3 (layers[2]);
-  std::bitset <128> tempo_4 (layers[3]);
-
-  tempo_1 <<= 96;
-  tempo_2 <<= 64;
-  tempo_3 <<= 32;
-  packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
-  int length = 0;
-  for (int i = 0; i < 16; i++)
+  if (getPacketType() == ACK)
   {
-    std::bitset<8> c;
-    int q = i*8;
-    for (int j = 0; j < 8; j++)
-      c[j] = packet[q++];
-    m_packet[length] = char(c.to_ulong());
-    length++;
+    layers[4] = *m_packetSeq;
+    layers[5] = *m_RTT;
+    layers[6] = *m_RTTVar;
+    layers[7] = *m_availBuffer;
+    layers[8] = *m_packRecvRate;
+    layers[9] = *m_linkCap;
+
+    std::bitset <320> tempo_4 (layers[4]);
+    std::bitset <320> tempo_5 (layers[5]);
+    std::bitset <320> tempo_6 (layers[6]);
+    std::bitset <320> tempo_7 (layers[7]);
+    std::bitset <320> tempo_8 (layers[8]);
+    std::bitset <320> tempo_9 (layers[9]);
+
+    tempo_0 <<= 288;
+    tempo_1 <<= 256;
+    tempo_2 <<= 224;
+    tempo_3 <<= 192;
+    tempo_4 <<= 160;
+    tempo_5 <<= 128;
+    tempo_6 <<= 96;
+    tempo_7 <<= 64;
+    tempo_8 <<= 32;
+
+    packet = tempo_0 | tempo_1 | tempo_2 | tempo_3 | tempo_4 | tempo_5 | tempo_6 | tempo_7 | tempo_8 | tempo_9;
+    int length = 0;
+    for (int i = 0; i < 40; i++)
+    {
+      std::bitset<8> c;
+      int q = i*8;
+      for (int j = 0; j < 8; j++)
+        c[j] = packet[q++];
+      m_packet[length] = char(c.to_ulong());
+      length++;
+    }
+    for (int i = 0; i < length; i++)
+      *(final_packet + i) = *(m_packet + i);
+    return length;
   }
-  for (int i = 0; i < length; i++)
-    *(final_packet + i) = *(m_packet + i);
-  return 1;
+  else if (getPacketType() == HANDSHAKE)
+  {
+    layers[4] = *m_Version;
+    layers[5] = *m_Type;
+    layers[6] = *m_ISN;
+    layers[7] = *m_MSS;
+    layers[8] = *m_FlightFlagSize;
+    layers[9] = *m_ReqType;
+
+    std::bitset <320> tempo_4 (layers[4]);
+    std::bitset <320> tempo_5 (layers[5]);
+    std::bitset <320> tempo_6 (layers[6]);
+    std::bitset <320> tempo_7 (layers[7]);
+    std::bitset <320> tempo_8 (layers[8]);
+    std::bitset <320> tempo_9 (layers[9]);
+
+    tempo_0 <<= 288;
+    tempo_1 <<= 256;
+    tempo_2 <<= 224;
+    tempo_3 <<= 192;
+    tempo_4 <<= 160;
+    tempo_5 <<= 128;
+    tempo_6 <<= 96;
+    tempo_7 <<= 64;
+    tempo_8 <<= 32;
+
+    packet = tempo_0 | tempo_1 | tempo_2 | tempo_3 | tempo_4 | tempo_5 | tempo_6 | tempo_7 | tempo_8 | tempo_9;
+    int length = 0;
+    for (int i = 0; i < 40; i++)
+    {
+      std::bitset<8> c;
+      int q = i*8;
+      for (int j = 0; j < 8; j++)
+        c[j] = packet[q++];
+      m_packet[length] = char(c.to_ulong());
+      length++;
+    }
+    for (int i = 0; i < length; i++)
+      *(final_packet + i) = *(m_packet + i);
+    return length;
+  }
+
+  else if (getPacketType() == NAK)
+  {
+    layers[4] = *m_LossInfo;
+
+    std::bitset <320> tempo_4 (layers[4]);
+    std::bitset <320> tempo_5 (layers[5]);
+    std::bitset <320> tempo_6 (layers[6]);
+    std::bitset <320> tempo_7 (layers[7]);
+    std::bitset <320> tempo_8 (layers[8]);
+    std::bitset <320> tempo_9 (layers[9]);
+
+    tempo_0 <<= 288;
+    tempo_1 <<= 256;
+    tempo_2 <<= 224;
+    tempo_3 <<= 192;
+    tempo_4 <<= 160;
+    tempo_5 <<= 128;
+    tempo_6 <<= 96;
+    tempo_7 <<= 64;
+    tempo_8 <<= 32;
+
+    packet = tempo_0 | tempo_1 | tempo_2 | tempo_3 | tempo_4 | tempo_5 | tempo_6 | tempo_7 | tempo_8 | tempo_9;
+
+    int length = 0;
+    for (int i = 0; i < 40; i++)
+    {
+      std::bitset<8> c;
+      int q = i*8;
+      for (int j = 0; j < 8; j++)
+        c[j] = packet[q++];
+      m_packet[length] = char(c.to_ulong());
+      length++;
+    }
+    for (int i = 0; i < length; i++)
+      *(final_packet + i) = *(m_packet + i);
+    return length;
+  }
+
+  else if (getPacketType() == DropRequest)
+  {
+    layers[4] = *m_firstMessage;
+    layers[5] = *m_lastMessage;
+
+    std::bitset <320> tempo_4 (layers[4]);
+    std::bitset <320> tempo_5 (layers[5]);
+    std::bitset <320> tempo_6 (layers[6]);
+    std::bitset <320> tempo_7 (layers[7]);
+    std::bitset <320> tempo_8 (layers[8]);
+    std::bitset <320> tempo_9 (layers[9]);
+
+    tempo_0 <<= 288;
+    tempo_1 <<= 256;
+    tempo_2 <<= 224;
+    tempo_3 <<= 192;
+    tempo_4 <<= 160;
+    tempo_5 <<= 128;
+    tempo_6 <<= 96;
+    tempo_7 <<= 64;
+    tempo_8 <<= 32;
+
+    packet = tempo_0 | tempo_1 | tempo_2 | tempo_3 | tempo_4 | tempo_5 | tempo_6 | tempo_7 | tempo_8 | tempo_9;
+
+    int length = 0;
+    for (int i = 0; i < 40; i++)
+    {
+      std::bitset<8> c;
+      int q = i*8;
+      for (int j = 0; j < 8; j++)
+        c[j] = packet[q++];
+      m_packet[length] = char(c.to_ulong());
+      length++;
+    }
+    for (int i = 0; i < length; i++)
+      *(final_packet + i) = *(m_packet + i);
+    return length;
+  }
+  else
+  {
+
+    std::bitset <320> tempo_4 (layers[4]);
+    std::bitset <320> tempo_5 (layers[5]);
+    std::bitset <320> tempo_6 (layers[6]);
+    std::bitset <320> tempo_7 (layers[7]);
+    std::bitset <320> tempo_8 (layers[8]);
+    std::bitset <320> tempo_9 (layers[9]);
+
+    tempo_0 <<= 288;
+    tempo_1 <<= 256;
+    tempo_2 <<= 224;
+    tempo_3 <<= 192;
+    tempo_4 <<= 160;
+    tempo_5 <<= 128;
+    tempo_6 <<= 96;
+    tempo_7 <<= 64;
+    tempo_8 <<= 32;
+
+    packet = tempo_0 | tempo_1 | tempo_2 | tempo_3 | tempo_4 | tempo_5 | tempo_6 | tempo_7 | tempo_8 | tempo_9;
+
+    int length = 0;
+    for (int i = 0; i < 40; i++)
+    {
+      std::bitset<8> c;
+      int q = i*8;
+      for (int j = 0; j < 8; j++)
+        c[j] = packet[q++];
+      m_packet[length] = char(c.to_ulong());
+      length++;
+    }
+    for (int i = 0; i < length; i++)
+      *(final_packet + i) = *(m_packet + i);
+    return length;
+  }
 }
 
 
@@ -118,17 +313,15 @@ int ControlPacket::extractPacket(char *final_packet)
 {
   if (!final_packet)
     return -1;
-  int final_size = 4;
-  uint32_t *layers = (uint32_t *)malloc(4*sizeof(uint32_t));
   char *temp = (char *)malloc(4*sizeof(char));
   int j = 0;
   int copy = 0;
   int layer = 0;
-  while (j < 16)
+  while (j < 40)
   {
     for (int i = 0; i < 4; i++)
       *(temp + i) = *(final_packet + i + j);
-    memcpy(layers + (3-layer), temp, 4);
+    memcpy(layers + (9-layer), temp, 4);
     layer++;
     j+=4;
   }
@@ -136,7 +329,54 @@ int ControlPacket::extractPacket(char *final_packet)
   *m_extendedtype = layers[0] & 0x0000FFFF;
   *m_subsequence = layers[1] & 0x7FFFFFFF;
   *m_timestamp = layers[2];
-  *m_controlInfo = layers[3];
+  *m_socketID = layers[3];
+  switch (*m_type)
+  {
+    case 2:   //0010 - Acknowledgement (ACK)
+              *m_packetSeq = layers[4];
+              *m_RTT = layers[5];
+              *m_RTTVar = layers[6];
+              *m_availBuffer = layers[7];
+              *m_packRecvRate = layers[8];
+              *m_linkCap = layers[9];
+              break;
+
+    case 6:   //0110 - Acknowledgement of Acknowledgement (ACK-2)
+              // ACK packet seq. no.
+              break;
+
+    case 3:   //0011 - Loss Report (NAK)
+              *m_LossInfo = layers[4];
+              break;
+
+    case 4:   //0100 - Congestion Warning
+              break;
+
+    case 1:   //0001 - Keep-alive
+              break;
+
+    case 0:   //0000 - Handshake
+              *m_Version = layers[4];
+              *m_Type = layers[5];
+              *m_ISN = layers[6];
+              *m_MSS = layers[7];
+              *m_FlightFlagSize = layers[8];
+              *m_ReqType = layers[9];
+              break;
+
+    case 5:   //0101 - Shutdown
+              break;
+
+    case 7:   //0111 - Message Drop Request
+              *m_firstMessage = layers[4];
+              *m_lastMessage = layers[5];
+              break;
+
+    case 8:   //1000 - Error Signal from the Peer Side
+              break;
+
+    default:  break;
+  }
   return 1;
 }
 
@@ -224,6 +464,25 @@ int ControlPacket::setType(uint32_t *type)
 }
 
 /****************************************************************************/
+/*                                setSocketID()                             */
+/*        Stores the ID that should be assigned to the said packet          */
+/*         If the parameter sequence is NULL, then -1 is returned           */
+/*         Pointer passed can be freed once the assignment is done          */
+/*               If the ID is set successfully, 1 is returned               */
+/****************************************************************************/
+
+int ControlPacket::setSocketID(uint32_t *socketID)
+{
+  if (socketID)
+  {
+    *m_socketID = *socketID;
+    return 1;
+  }
+  else
+    return -1;
+}
+
+/****************************************************************************/
 /*                            setExtendedType()                             */
 /*       Stores the etype that should be assigned to the said packet        */
 /*         If the parameter sequence is NULL, then -1 is returned           */
@@ -288,11 +547,37 @@ int ControlPacket::setSubsequence(uint32_t *subsequence)
 /*            If the controlinfo is set successfully, 1 is returned         */
 /****************************************************************************/
 
-int ControlPacket::setControlInfo(uint32_t *controlinfo)
+int ControlPacket::setControlInfo(ControlPacketType eType, uint32_t *controlinfo)
 {
-  if (controlinfo)
+  if (eType == HANDSHAKE && controlinfo)
   {
-    *m_controlInfo = *controlinfo;
+    *m_Version = *controlinfo++;
+    *m_Type = *controlinfo++;
+    *m_ISN = *controlinfo++;
+    *m_MSS = *controlinfo++;
+    *m_FlightFlagSize = *controlinfo++;
+    *m_ReqType = *controlinfo++;
+    return 1;
+  }
+  else if (eType == ACK && controlinfo)
+  {
+    *m_packetSeq = *controlinfo++;
+    *m_RTT = *controlinfo++;
+    *m_RTTVar = *controlinfo++;
+    *m_availBuffer = *controlinfo++;
+    *m_packRecvRate = *controlinfo++;
+    *m_linkCap = *controlinfo++;
+    return 1;
+  }
+  else if (eType == NAK && controlinfo)
+  {
+    *m_LossInfo = *controlinfo;
+    return 1;
+  }
+  else if (eType == DropRequest && controlinfo)
+  {
+    *m_firstMessage = *controlinfo++;
+    *m_lastMessage = *controlinfo++;
     return 1;
   }
   else
@@ -331,10 +616,51 @@ uint32_t ControlPacket::getTimestamp()
     return -1;
 }
 
-uint32_t ControlPacket::getControlInfo()
+uint32_t ControlPacket::getControlInfo(uint32_t *information, int &size)
 {
-  if (m_controlInfo)
-    return *m_controlInfo;
+  if (getPacketType() == HANDSHAKE && information)
+  {
+    *information++ = *m_Version;
+    *information++ = *m_Type;
+    *information++ = *m_ISN;
+    *information++ = *m_MSS;
+    *information++ = *m_FlightFlagSize;
+    *information++ = *m_ReqType;
+    size = 6;
+    return 1;
+  }
+  else if (getPacketType() == ACK && information)
+  {
+    *information++ = *m_packetSeq;
+    *information++ = *m_RTT;
+    *information++ = *m_RTTVar;
+    *information++ = *m_availBuffer;
+    *information++ = *m_packRecvRate;
+    *information++ = *m_linkCap;
+    size = 6;
+    return 1;
+  }
+  else if (getPacketType() == NAK && information)
+  {
+    *information++ = *m_LossInfo;
+    size = 1;
+    return 1;
+  }
+  else if (getPacketType() == DropRequest && information)
+  {
+    *information++ = *m_firstMessage;
+    *information++ = *m_lastMessage;
+    size = 2;
+    return 1;
+  }
+  else
+    return -1;
+}
+
+uint32_t ControlPacket::getSocketID()
+{
+  if (m_socketID)
+    return *m_socketID;
   else
     return -1;
 }

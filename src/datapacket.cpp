@@ -12,6 +12,8 @@
 /*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
 /*   |                          Time Stamp                           |      */
 /*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
+/*   |                           Socket ID                           |      */
+/*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      */
 /*                                                                          */
 /****************************************************************************/
 
@@ -29,7 +31,8 @@ m_packetData(NULL),
 m_funcField(NULL),
 m_orderBit(NULL),
 m_packet(NULL),
-m_length(NULL)
+m_length(NULL),
+m_socketID(NULL)
 {
   for (int i = 0; i < 3; i++)
     layers[i] = 0;
@@ -38,6 +41,7 @@ m_length(NULL)
   m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
   m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
+  m_socketID = (uint32_t *)malloc(sizeof(uint32_t));
   m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
 }
 
@@ -71,7 +75,7 @@ int DataPacket::getLength()
 
 int DataPacket::makePacket(char *final_packet)
 {
-  if (!m_sequence || !m_message || !m_timestamp || !m_packetData || !m_orderBit || !m_funcField)
+  if (!m_sequence || !m_message || !m_timestamp || !m_packetData || !m_orderBit || !m_funcField || !m_socketID)
     return -1;
 
   // set the type as data; make the first bit of the packet 0
@@ -80,6 +84,7 @@ int DataPacket::makePacket(char *final_packet)
   // set the ordering priority as the next bit
   // set the next 29 bits as message sequence
   // issue a time stamp for the next 32 bits
+  // add a socket ID
   // finally, copy the payload and return a pointer to the packet
 
   // make a temporary string for the second row of the data packet
@@ -94,20 +99,23 @@ int DataPacket::makePacket(char *final_packet)
   layers[0] = 0x7FFFFFFF & *m_sequence;
   layers[1] = *temp_1;
   layers[2] = *m_timestamp;
+  layers[3] = *m_socketID;
 
   free(temp_1);
   free(temp_2);
   free(temp_3);
 
-  std::bitset <96> tempo_1 (layers[0]);
-  std::bitset <96> tempo_2 (layers[1]);
-  std::bitset <96> tempo_3 (layers[2]);
-  tempo_1 <<= 64;
-  tempo_2 <<= 32;
+  std::bitset <128> tempo_1 (layers[0]);
+  std::bitset <128> tempo_2 (layers[1]);
+  std::bitset <128> tempo_3 (layers[2]);
+  std::bitset <128> tempo_4 (layers[3]);
+  tempo_1 <<= 96;
+  tempo_2 <<= 64;
+  tempo_3 <<= 32;
   int length = 0;
-  packet = tempo_1 | tempo_2 | tempo_3;
+  packet = tempo_1 | tempo_2 | tempo_3 | tempo_4;
 
-  for (int i = 0; i < 12; i++)
+  for (int i = 0; i < 16; i++)
   {
     std::bitset<8> c;
     int q = i*8;
@@ -118,9 +126,9 @@ int DataPacket::makePacket(char *final_packet)
   }
 
   for (int i = 0; i < *m_length; i++)
-    *(m_packet + 12 + i) = *(m_packetData + i);
+    *(m_packet + 16 + i) = *(m_packetData + i);
 
-  for (int i = 0; i < 12+*m_length; i++)
+  for (int i = 0; i < 16+*m_length; i++)
     *(final_packet + i) = *(m_packet + i);
 
   return length+*m_length;
@@ -137,7 +145,7 @@ int DataPacket::setPayload(char *poData, int length)
   if (poData)
   {
     m_packetData = (char *)malloc(length*sizeof(char));
-    m_packet = (char *)malloc((12+length)*sizeof(char));
+    m_packet = (char *)malloc((16+length)*sizeof(char));
     *m_length = length;
     for (int i = 0; i < length; i++)
       *(m_packetData + i) = *(poData + i);
@@ -170,6 +178,25 @@ int DataPacket::setSequence(uint32_t *sequence)
   if (sequence)
   {
     *m_sequence = *sequence;
+    return 1;
+  }
+  else
+    return -1;
+}
+
+/****************************************************************************/
+/*                              setSocketID()                               */
+/*   Stores the socketID number that should be assigned to the said packet  */
+/*         If the parameter sequence is NULL, then -1 is returned           */
+/*          Pointer passed can be freed once the assignment is done         */
+/*          If the socketID is set successfully, 1 is returned              */
+/****************************************************************************/
+
+int DataPacket::setSocketID(uint32_t *socketID)
+{
+  if (socketID)
+  {
+    *m_socketID = *socketID;
     return 1;
   }
   else
@@ -264,16 +291,16 @@ int DataPacket::extractPacket(char *final_packet, int length)
 {
   if (!final_packet)
     return -1;
-  uint32_t *layers = (uint32_t *)malloc(3*sizeof(uint32_t));
+  uint32_t *layers = (uint32_t *)malloc(4*sizeof(uint32_t));
   char *temp = (char *)malloc(4*sizeof(char));
   int j = 0;
   int copy = 0;
   int layer = 0;
-  while (j < 12)
+  while (j < 16)
   {
     for (int i = 0; i < 4; i++)
       *(temp + i) = *(final_packet + i + j);
-    memcpy(layers + (2-layer), temp, 4);
+    memcpy(layers + (3-layer), temp, 4);
     layer++;
     j+=4;
   }
@@ -282,14 +309,15 @@ int DataPacket::extractPacket(char *final_packet, int length)
   *m_orderBit = (layers[1] & 0x20000000) >> 29;
   *m_message = (layers[1] & 0x1FFFFFFF);
   *m_timestamp = layers[2];
+  *m_socketID = layers[3];
   if (m_packetData)
     free(m_packetData);
-  m_packetData = (char *)malloc((length-12)*sizeof(char));
+  m_packetData = (char *)malloc((length-16)*sizeof(char));
   if (m_packet)
     free(m_packet);
   m_packet = (char *)malloc(length*sizeof(char));
-  for (int i = 0; i < length-12; i++)
-    *(m_packetData + i) = *(final_packet + 12 + i);
+  for (int i = 0; i < length-16; i++)
+    *(m_packetData + i) = *(final_packet + 16 + i);
   return 1;
 }
 
@@ -329,6 +357,14 @@ uint32_t DataPacket::getTimestamp()
 {
   if (m_timestamp)
     return *m_timestamp;
+  else
+    return -1;
+}
+
+uint32_t DataPacket::getSocketID()
+{
+  if (m_socketID)
+    return *m_socketID;
   else
     return -1;
 }

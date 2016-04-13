@@ -155,7 +155,8 @@ int main()
 {
   UDTSocket *socket = new UDTSocket();
   socket->setIPVersion(IPv4);
-  socket->newSocket(12);
+  socket->newSocket(67841);
+  socket->bindSocket(67841);
   char *buffer = (char *)malloc(MAXSIZE*sizeof(char));
   strcpy(buffer,"checking_1");
   struct sockaddr_in serverAddr;

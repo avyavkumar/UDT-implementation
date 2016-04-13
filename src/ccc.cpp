@@ -1,12 +1,3 @@
-// get handshaking packet
-// check with the request packet
-#include "connection.h"
-#include "handshakepacket.h"
-#include <stdlib.h>
-#include <iomanip>
-#include <chrono>
-#include <ctime>
-
 int CCC::init(Role eRole)
 {
   if (eRole == CLIENT)
