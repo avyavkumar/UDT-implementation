@@ -50,7 +50,6 @@ public:
 
   int makePacket(char *final_packet);
   int extractPacket(char *final_packet);
-  PacketType getFlag();
   ControlPacketType getPacketType();
   int setType(uint32_t *type);
   int setExtendedType(uint32_t *message);

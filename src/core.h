@@ -6,14 +6,14 @@
 
 class UDTCore
 {
-  // Functionality:
+  // Functionality:``
   //    initialize a UDT entity and bind to a local address.
   // Parameters:
   //    None.
   // Returned value:
   //    None.
 
-  void open();
+  int open(UDTSocket *socket);
 
   // Functionality:
   //    Start listening to any connection request.

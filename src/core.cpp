@@ -5,13 +5,15 @@
 // Returned value:
 //    None.
 
-void open();
+UDTCore::open(UDTSocket *socket)
+{
+  if (!socket)
+  {
+    std::cerr << "UNAVAILABLE MEMORY FOR SOCKET" << std::endl;
+    return -1;
+  }
+  // intialise HANDSHAKEing information
+  // send the HANDSHAKEing packet
+  // Wait for the return 
 
-// Functionality:
-//    Start listening to any connection request.
-// Parameters:
-//    None.
-// Returned value:
-//    None.
-
-void listen();
+}

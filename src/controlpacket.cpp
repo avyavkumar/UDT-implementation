@@ -435,16 +435,6 @@ ControlPacketType ControlPacket::getPacketType()
 }
 
 /****************************************************************************/
-/*                              getFlag()                                   */
-/*                        Returns the type of flag                          */
-/****************************************************************************/
-
-PacketType ControlPacket::getFlag()
-{
-  return CONTROL;
-}
-
-/****************************************************************************/
 /*                                setType()                                 */
 /*       Stores the type that should be assigned to the said packet         */
 /*         If the parameter sequence is NULL, then -1 is returned           */

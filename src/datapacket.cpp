@@ -156,16 +156,6 @@ int DataPacket::setPayload(char *poData, int length)
 }
 
 /****************************************************************************/
-/*                              getFlag()                                   */
-/*                        Returns the type of flag                          */
-/****************************************************************************/
-
-PacketType DataPacket::getFlag()
-{
-  return DATA;
-}
-
-/****************************************************************************/
 /*                              setSequence()                               */
 /*   Stores the sequence number that should be assigned to the said packet  */
 /*         If the parameter sequence is NULL, then -1 is returned           */

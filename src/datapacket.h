@@ -32,7 +32,6 @@ public:
   int getLength();
   int makePacket(char *final_packet);
   int setPayload(char *pData, int length);
-  PacketType getFlag();
   int setSequence(uint32_t *sequence);
   int setMessage(uint32_t *message);
   int setTimestamp(uint32_t *timestamp);
