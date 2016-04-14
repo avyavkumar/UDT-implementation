@@ -7,7 +7,8 @@ enum PacketType {DATA = 0x0, CONTROL = 0x1, ERROR};
 // types of subcategories in control packets
 #ifndef CONTROL_PACKET_TYPE
 #define CONTROL_PACKET_TYPE
-enum ControlPacketType {HANDSHAKE, ACK, ACK2, NAK, KeepAlive, ShutDown, DropRequest, ERR, UNKNOWN, CONGESTION};
+enum ControlPacketType {HANDSHAKE = 0, ACK = 2, ACK2 = 6, NAK = 3, KeepAlive = 1, ShutDown = 5,
+                        DropRequest = 7, ERR, UNKNOWN, CONGESTION};
 #endif
 
 #ifndef MAXSIZE

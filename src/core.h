@@ -1,19 +1,43 @@
 #include "socket.h"
 #include "controlpacket.h"
 #include "datapacket.h"
-#include "handshakepacket.h"
 #include "packet.h"
+#include <utility>
+#include <chrono>
+#include <ctime>
 
 class UDTCore
 {
-  // Functionality:``
-  //    initialize a UDT entity and bind to a local address.
-  // Parameters:
-  //    None.
-  // Returned value:
-  //    None.
+private:
+  uint32_t *current_socket;
+  int _successConnect = 0;
+  // std::vector < std::pair <uint32_t, uint32_t> > m_type;                           // type
+  // std::vector < std::pair <uint32_t, uint32_t> > m_extendedtype;                   // extended type
+  // std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // sub-sequence number
+  // std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // timestamp information
+  // std::vector < std::pair <uint32_t, uint32_t> > m_socketID;                       // socket ID
+  static std::vector < std::pair <uint32_t, uint32_t> > m_packetSeq;                      // ACK - received packets
+  static std::vector < std::pair <uint32_t, uint32_t> > m_RTT;                            // ACK - RTT
+  static std::vector < std::pair <uint32_t, uint32_t> > m_RTTVar;                         // ACK - RTTVar
+  static std::vector < std::pair <uint32_t, uint32_t> > m_availBuffer;                    // ACK - available buffer
+  static std::vector < std::pair <uint32_t, uint32_t> > m_packRecvRate;                   // ACK - packet receiving rate
+  static std::vector < std::pair <uint32_t, uint32_t> > m_linkCap;                        // ACK - link capacity
+  static std::vector < std::pair <uint32_t, uint32_t> > m_Version;                        // HS - UDT version
+  static std::vector < std::pair <uint32_t, uint32_t> > m_Type;                           // HS - UDT socket type
+  static std::vector < std::pair <uint32_t, uint32_t> > m_ISN;                            // HS - random initial sequence number
+  static std::vector < std::pair <uint32_t, uint32_t> > m_MSS;                            // HS - maximum segment size
+  static std::vector < std::pair <uint32_t, uint32_t> > m_FlightFlagSize;                 // HS - flow control window size
+  static std::vector < std::pair <uint32_t, uint32_t> > m_ReqType;                        // HS - connection request type:
+                                                                                          //  1: regular connection request,
+                                                                                          //  0: rendezvous connection request,
+                                                                                          //  -1/-2: response
+  static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss information
+  static std::vector < std::pair <uint32_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
+  static std::vector < std::pair <uint32_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
+  uint32_t hash(uint32_t x);
 
-  int open(UDTSocket *socket);
+public:
+  static UDTSocket* open(int conn_type, int port);
 
   // Functionality:
   //    Start listening to any connection request.
@@ -23,15 +47,7 @@ class UDTCore
   //    None.
 
   void listen();
-
-  // Functionality:
-  //    Connect to a UDT entity listening at address "peer".
-  // Parameters:
-  //    0) [in] peer: The address of the listening UDT entity.
-  // Returned value:
-  //    None.
-
-  void connect(const sockaddr* peer);
+  static void connect(UDTSocket *socket, const sockaddr* peer);
 
   // Functionality:
   //    Process the response handshake packet.

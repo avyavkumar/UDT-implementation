@@ -11,6 +11,7 @@ m_address(),
 m_storageSent(),
 m_IPVersion(Err),
 m_storageRecv(),
+m_family(-1)
 m_port(0) {}
 
 /****************************************************************************/
@@ -42,6 +43,7 @@ int UDTSocket::newSocket(int family, int port)
 {
   m_port = port;
   /*Create UDP socket*/
+  m_family = family;
   try
   {
     m_socketid = socket(AF_INET, family, 0);
@@ -153,4 +155,24 @@ int UDTSocket::ReceivePacket(char *buffer)
 
   // if (std::find(m_storageRecv.begin(), m_storageRecv.end(), client_address) != m_storageRecv.end())
   //   m_storageRecv.push_back(client_address);
+}
+
+/****************************************************************************/
+/*                             getSocketID()                                */
+/*         Returns 0 if unsuccessful; socketID received if successful       */
+/****************************************************************************/
+
+uint64_t UDTSocket::getSocketID()
+{
+    return m_socketid;
+}
+
+/****************************************************************************/
+/*                             getFamily()                                  */
+/*        Returns -1 if unsuccessful;getFamily received if successful       */
+/****************************************************************************/
+
+int UDTSocket::getFamily()
+{
+    return m_family;
 }

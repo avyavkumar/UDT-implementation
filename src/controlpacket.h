@@ -52,8 +52,8 @@ public:
   int extractPacket(char *final_packet);
   ControlPacketType getPacketType();
   int setType(uint32_t *type);
-  int setExtendedType(uint32_t *message);
-  int setSubsequence(uint32_t *funcField);
+  int setExtendedType(uint32_t *extendedtype);
+  int setSubsequence(uint32_t *subsequence);
   int setTimestamp(uint32_t *timestamp);
   int setControlInfo(ControlPacketType eType, uint32_t *controlinfo);
   int setSocketID(uint32_t *socketID);
