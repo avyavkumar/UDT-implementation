@@ -22,7 +22,7 @@ class UDTCore
   // Returned value:
   //    None.
 
-  void listen();
+  int listen(UDTSocket *socket);
 
   // Functionality:
   //    Connect to a UDT entity listening at address "peer".
@@ -159,3 +159,4 @@ class UDTCore
 
   void sample(CPerfMon* perf, bool clear = true);
 };
+
