@@ -8,14 +8,11 @@
 
 class UDTCore
 {
-private:
+protected:
   uint32_t *current_socket;
-  int _successConnect = 0;
-  // std::vector < std::pair <uint32_t, uint32_t> > m_type;                           // type
-  // std::vector < std::pair <uint32_t, uint32_t> > m_extendedtype;                   // extended type
-  // std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // sub-sequence number
-  // std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // timestamp information
-  // std::vector < std::pair <uint32_t, uint32_t> > m_socketID;                       // socket ID
+  int _successConnectServer;
+  int _successConnectClient;
+
   static std::vector < std::pair <uint32_t, uint32_t> > m_packetSeq;                      // ACK - received packets
   static std::vector < std::pair <uint32_t, uint32_t> > m_RTT;                            // ACK - RTT
   static std::vector < std::pair <uint32_t, uint32_t> > m_RTTVar;                         // ACK - RTTVar
@@ -48,25 +45,7 @@ public:
 
   void listen();
   static void connect(UDTSocket *socket, const sockaddr* peer);
-
-  // Functionality:
-  //    Process the response handshake packet.
-  // Parameters:
-  //    0) [in] pkt: handshake packet.
-  // Returned value:
-  //    Return 0 if connected, positive value if connection is in progress, otherwise error code.
-
-  int connect(const CPacket& pkt) throw ();
-
-  // Functionality:
-  //    Connect to a UDT entity listening at address "peer", which has sent "hs" request.
-  // Parameters:
-  //    0) [in] peer: The address of the listening UDT entity.
-  //    1) [in/out] hs: The handshake information sent by the peer side (in), negotiated value (out).
-  // Returned value:
-  //    None.
-
-  void connect(const sockaddr* peer, CHandShake* hs);
+  static void connect(UDTSocket *socket, const sockaddr* peer, ControlPacket* packet);
 
   // Functionality:
   //    Close the opened UDT entity.
