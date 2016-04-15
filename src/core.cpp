@@ -1,3 +1,9 @@
+#include "core.h"
+
+uint32_t UDTCore::current_socket = 0;
+int UDTCore::_successConnectServer = 0;
+int UDTCore::_successConnectClient = 0;
+
 uint32_t UDTCore::hash(uint32_t x)
 {
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -6,12 +12,7 @@ uint32_t UDTCore::hash(uint32_t x)
     return x;
 }
 
-UDTCore::UDTCore():
-_successConnectServer(0),
-_successConnectClient(0)
-{
-  current_socket = (uint32_t *)malloc(sizeof(uint32_t));
-}
+UDTCore::UDTCore() {}
 
 /****************************************************************************/
 /*                                  open()                                  */
@@ -21,7 +22,7 @@ _successConnectClient(0)
 
 UDTSocket* UDTCore::open(int conn_type, int port)
 {
-  UDT *socket = new Socket();
+  UDTSocket *socket = new UDTSocket();
   socket->setIPVersion(IPv4);
   int _socket = socket->newSocket(conn_type, port);
 
@@ -48,7 +49,7 @@ UDTSocket* UDTCore::open(int conn_type, int port)
 /*   Basically used by client in a client-server role to connect to server  */
 /****************************************************************************/
 
-void connect(UDTSocket *socket, const sockaddr* peer);
+void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
 {
   if (!socket || !peer)
   {
@@ -57,7 +58,7 @@ void connect(UDTSocket *socket, const sockaddr* peer);
   }
   // intialise HANDSHAKEing information
 
-  (*current_socket)++;
+  UDTCore::current_socket++;
   ControlPacket *packet = new ControlPacket();
   ControlPacket *rec_packet = new ControlPacket();
   uint32_t *type = (uint32_t *)malloc(sizeof(uint32_t));
@@ -72,7 +73,7 @@ void connect(UDTSocket *socket, const sockaddr* peer);
   *timestamp = // std::clock(); // timer mechanism
   *socketID = socket->getSocketID();
 
-  controlInfo[0] = 4                                              // HS - UDT version
+  controlInfo[0] = 4;                                              // HS - UDT version
   controlInfo[1] = socket->getFamily();                           // HS - UDT Socket type - 0 - and 1-
   controlInfo[2] = *subsequence;                                  // HS - random initial seq #
   controlInfo[3] = MAXSIZE;                                       // HS - maximum segment size
@@ -86,31 +87,31 @@ void connect(UDTSocket *socket, const sockaddr* peer);
     std::cerr << "FAILURE-TYPE" << std::endl;
     return;
   }
-  _temp = setExtendedType(extendedtype);
+  _temp = packet->setExtendedType(extendedtype);
   if (_temp == -1)
   {
     std::cerr << "FAILURE-EXTENDEDTYPE" << std::endl;
     return;
   }
-  _temp = setSubsequence(subsequence);
+  _temp = packet->setSubsequence(subsequence);
   if (_temp == -1)
   {
     std::cerr << "FAILURE-SUBSEQUENCE" << std::endl;
     return;
   }
-  _temp = setTimestamp(timestamp);
+  _temp = packet->setTimestamp(timestamp);
   if (_temp == -1)
   {
     std::cerr << "FAILURE-TIMESTAMP" << std::endl;
     return;
   }
-  _temp = setControlInfo(HANDSHAKE, controlInfo);
+  _temp = packet->setControlInfo(HANDSHAKE, controlInfo);
   if (_temp == -1)
   {
     std::cerr << "FAILURE-CONTROLINFO" << std::endl;
     return;
   }
-  _temp = setSocketID(socketID);
+  _temp = packet->setSocketID(socketID);
   if (_temp == -1)
   {
     std::cerr << "FAILURE-SOCKETID" << std::endl;
@@ -135,7 +136,7 @@ void connect(UDTSocket *socket, const sockaddr* peer);
   do
   {
     // send the HANDSHAKEing packet
-    int _sent = packet->SendPacket(peer, s_packet, _bytes);
+    int _sent = socket->SendPacket(*peer, s_packet, _bytes);
     if (_sent != 40)
     {
       std::cerr << "ERR-CORRUPT BYTES" << std::endl;
@@ -146,7 +147,7 @@ void connect(UDTSocket *socket, const sockaddr* peer);
     while (std::clock() - c_start < 1000);
 
     // Wait for the return - timer version
-    int _recv = packet->ReceivePacket(r_packet);
+    int _recv = socket->ReceivePacket(r_packet);
     // 40 bytes for control packet; acts as a check
     if (_recv == 40)
     {
@@ -167,23 +168,23 @@ void connect(UDTSocket *socket, const sockaddr* peer);
             {
               std::pair < uint32_t, uint32_t > temp;
               // HS - UDT version
-              temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[0]);
+              temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[0]);
               UDTCore::m_Version.push_back(temp);
 
               // HS - UDT socket type
-              temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[1]);
+              temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[1]);
               UDTCore::m_Type.push_back(temp);
 
               // HS - random initial sequence number
-              temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[2]);
+              temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[2]);
               UDTCore::m_ISN.push_back(temp);
 
               // HS - maximum segment size
-              temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[3]);
+              temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[3]);
               UDTCore::m_MSS.push_back(temp);
 
               // HS - flow control window size
-              temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[4]);
+              temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[4]);
               UDTCore::m_FlightFlagSize.push_back(temp);
 
               _successConnectClient = 1;
@@ -211,9 +212,9 @@ void connect(UDTSocket *socket, const sockaddr* peer);
 /*   Basically used by server in a client-server role to connect to server  */
 /****************************************************************************/
 
-void connect(UDTSocket *socket, const sockaddr *peer, ControlPacket *rec_packet)
+void UDTCore::connect(const sockaddr_in *peer, ControlPacket *rec_packet)
 {
-  if (!socket || !peer || !packet)
+  if (!peer || !rec_packet)
   {
     std::cerr << "SOCKET/PEER ARE UNALLOC" << std::endl;
     return;
@@ -245,23 +246,23 @@ void connect(UDTSocket *socket, const sockaddr *peer, ControlPacket *rec_packet)
           {
             std::pair < uint32_t, uint32_t > temp;
             // HS - UDT version
-            temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[0]);
+            temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[0]);
             UDTCore::m_Version.push_back(temp);
 
             // HS - UDT socket type
-            temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[1]);
+            temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[1]);
             UDTCore::m_Type.push_back(temp);
 
             // HS - random initial sequence number
-            temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[2]);
+            temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[2]);
             UDTCore::m_ISN.push_back(temp);
 
             // HS - maximum segment size
-            temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[3]);
+            temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[3]);
             UDTCore::m_MSS.push_back(temp);
 
             // HS - flow control window size
-            temp = std::make_pair(hash(rec_packet->getSocketID()), control_info[4]);
+            temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), control_info[4]);
             UDTCore::m_FlightFlagSize.push_back(temp);
 
             _successConnectServer = 1;

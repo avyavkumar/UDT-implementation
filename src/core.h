@@ -5,13 +5,14 @@
 #include <utility>
 #include <chrono>
 #include <ctime>
+#include <stdint.h>
 
 class UDTCore
 {
-protected:
-  uint32_t *current_socket;
-  int _successConnectServer;
-  int _successConnectClient;
+public:
+  static uint32_t current_socket;
+  static int _successConnectServer;
+  static int _successConnectClient;
 
   static std::vector < std::pair <uint32_t, uint32_t> > m_packetSeq;                      // ACK - received packets
   static std::vector < std::pair <uint32_t, uint32_t> > m_RTT;                            // ACK - RTT
@@ -31,11 +32,14 @@ protected:
   static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss information
   static std::vector < std::pair <uint32_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
   static std::vector < std::pair <uint32_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
-  uint32_t hash(uint32_t x);
+  static uint32_t hash(uint32_t x);
 
-public:
+  UDTCore();
   static UDTSocket* open(int conn_type, int port);
+  static void connect(UDTSocket *socket, const sockaddr_in *peer);
+  static void connect(const sockaddr_in *peer, ControlPacket* packet);
 
+  /*
   // Functionality:
   //    Start listening to any connection request.
   // Parameters:
@@ -44,8 +48,6 @@ public:
   //    None.
 
   void listen();
-  static void connect(UDTSocket *socket, const sockaddr* peer);
-  static void connect(UDTSocket *socket, const sockaddr* peer, ControlPacket* packet);
 
   // Functionality:
   //    Close the opened UDT entity.
@@ -153,4 +155,5 @@ public:
   //    None.
 
   void sample(CPerfMon* perf, bool clear = true);
+  */
 };

@@ -11,7 +11,7 @@ m_address(),
 m_storageSent(),
 m_IPVersion(Err),
 m_storageRecv(),
-m_family(-1)
+m_family(-1),
 m_port(0) {}
 
 /****************************************************************************/
