@@ -69,8 +69,8 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
   uint32_t *controlInfo = (uint32_t *)malloc(6*sizeof(uint32_t));
   *type = HANDSHAKE;
   *extendedtype = 0;
-  *subsequence = // initial random subsequence
-  *timestamp = // std::clock(); // timer mechanism
+  *subsequence = 0x4324; // initial random subsequence
+  *timestamp = std::clock(); // timer mechanism
   *socketID = socket->getSocketID();
 
   controlInfo[0] = 4;                                              // HS - UDT version
