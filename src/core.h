@@ -6,6 +6,8 @@
 #include <chrono>
 #include <ctime>
 #include <stdint.h>
+#include <vector>
+#include <algorithm>
 
 class UDTCore
 {
@@ -13,6 +15,9 @@ public:
   static uint32_t current_socket;
   static int _successConnectServer;
   static int _successConnectClient;
+
+  static std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
+  static std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // latest timestamp
 
   static std::vector < std::pair <uint32_t, uint32_t> > m_packetSeq;                      // ACK - received packets
   static std::vector < std::pair <uint32_t, uint32_t> > m_RTT;                            // ACK - RTT
@@ -32,13 +37,15 @@ public:
   static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss information
   static std::vector < std::pair <uint32_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
   static std::vector < std::pair <uint32_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
+
+  static std::vector < std::pair <uint32_t, sockaddr_in> > m_activeConn;                  // list of active connections
   static uint32_t hash(uint32_t x);
 
   UDTCore();
   static UDTSocket* open(int conn_type, int port);
   static void connect(UDTSocket *socket, const sockaddr_in *peer);
   static void connect(const sockaddr_in *peer, ControlPacket* packet);
-
+  static void close(UDTSocket *socket, const sockaddr_in *peer);
   /*
   // Functionality:
   //    Start listening to any connection request.
@@ -48,15 +55,6 @@ public:
   //    None.
 
   void listen();
-
-  // Functionality:
-  //    Close the opened UDT entity.
-  // Parameters:
-  //    None.
-  // Returned value:
-  //    None.
-
-  void close();
 
   // Functionality:
   //    Request UDT to send out a data block "data" with size of "len".

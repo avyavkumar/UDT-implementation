@@ -1,5 +1,4 @@
 #include "packet.h"
-#include "handshakepacket.h"
 #include <cstring>
 #include <cstdlib>
 #include <bitset>
