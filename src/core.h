@@ -15,6 +15,8 @@ public:
   static uint32_t current_socket;
   static int _successConnectServer;
   static int _successConnectClient;
+  static uint32_t _currFlowWindowSize;
+  static uint32_t _currPacketSize;
 
   static std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
   static std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // latest timestamp
@@ -34,7 +36,7 @@ public:
                                                                                           //  1: regular connection request,
                                                                                           //  0: rendezvous connection request,
                                                                                           //  -1/-2: response
-  static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss information
+  static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss list
   static std::vector < std::pair <uint32_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
   static std::vector < std::pair <uint32_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
 
@@ -44,8 +46,11 @@ public:
   UDTCore();
   static UDTSocket* open(int conn_type, int port);
   static void connect(UDTSocket *socket, const sockaddr_in *peer);
-  static void connect(const sockaddr_in *peer, ControlPacket* packet);
+  static void connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket *rec_packet);
+  // TODO - implement a method for rendezvous connection
+  // TODO - write a sendmsg and recvmsg method
   static void close(UDTSocket *socket, const sockaddr_in *peer);
+
   /*
   // Functionality:
   //    Start listening to any connection request.

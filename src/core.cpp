@@ -223,7 +223,9 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
 /*   Basically used by server in a client-server role to connect to server  */
 /****************************************************************************/
 
-void UDTCore::connect(const sockaddr_in *peer, ControlPacket *rec_packet)
+// TODO - intial subsequence number as well as timers
+
+void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket *rec_packet)
 {
   if (!peer || !rec_packet)
   {
@@ -277,9 +279,81 @@ void UDTCore::connect(const sockaddr_in *peer, ControlPacket *rec_packet)
             UDTCore::m_FlightFlagSize.push_back(temp);
 
             _successConnectServer = 1;
-            
+
             // add it to the log of active connections
             m_activeConn.push_back(std::make_pair(UDTCore::hash(peer->sin_addr.s_addr), *peer));
+
+            //send a response packet
+            ControlPacket *res_packet = new ControlPacket();
+            uint32_t *type = (uint32_t *)malloc(sizeof(uint32_t));
+            uint32_t *extendedtype = (uint32_t *)malloc(sizeof(uint32_t));
+            uint32_t *subsequence = (uint32_t *)malloc(sizeof(uint32_t));
+            uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+            uint32_t *socketID = (uint32_t *)malloc(sizeof(uint32_t));
+            uint32_t *controlInfo = (uint32_t *)malloc(6*sizeof(uint32_t));
+            *type = HANDSHAKE;
+            *extendedtype = 0;
+            *subsequence = 0x4324;     // initial random subsequence
+            *timestamp = std::clock(); // timer mechanism
+            *socketID = socket->getSocketID();
+
+            controlInfo[0] = 4;                                              // HS - UDT version
+            controlInfo[1] = socket->getFamily();                            // HS - UDT Socket type - 0 - and 1-
+            controlInfo[2] = *subsequence;                                   // HS - random initial seq #
+            if (control_info[3] > _currPacketSize)                           // HS - maximum segment size
+              controlInfo[3] = _currPacketSize;
+            else
+            {
+              controlInfo[3] = control_info[3];
+              _currPacketSize = control_info[3];
+            }
+            if (control_info[4] > _currFlowWindowSize)                       // HS - flow control window size
+              controlInfo[3] = _currFlowWindowSize;
+            else
+            {
+              controlInfo[3] = control_info[3];
+              _currFlowWindowSize = control_info[3];
+            }
+            controlInfo[5] = -1;                                             // HS - connection response type
+
+            int _check;
+            _check = res_packet->setType(type);
+            if (_check == -1)
+              std::cerr << "FAILURE-TYPE" << std::endl;
+            _check = res_packet->setExtendedType(extendedtype);
+            if (_check == -1)
+              std::cerr << "FAILURE-EXTENDEDTYPE" << std::endl;
+            _check = res_packet->setSubsequence(subsequence);
+            if (_check == -1)
+              std::cerr << "FAILURE-SUBSEQUENCE" << std::endl;
+            _check = res_packet->setTimestamp(timestamp);
+            if (_check == -1)
+              std::cerr << "FAILURE-TIMESTAMP" << std::endl;
+            _check = res_packet->setControlInfo(HANDSHAKE, controlInfo);
+            if (_check == -1)
+              std::cerr << "FAILURE-CONTROLINFO" << std::endl;
+            _check = res_packet->setSocketID(socketID);
+            if (_check == -1)
+              std::cerr << "FAILURE-SOCKETID" << std::endl;
+            free(type);
+            free(extendedtype);
+            free(subsequence);
+            free(timestamp);
+            free(socketID);
+            for (int i = 0; i < 6; i++)
+              free(controlInfo+i);
+            char *s_packet = (char *)malloc(40*sizeof(char));
+            int _bytes_made = res_packet->makePacket(s_packet);
+            if (_bytes_made == 40)
+            {
+              int _bytes_sent = socket->SendPacket(*peer, s_packet, _bytes_made);
+              if (_bytes_sent != 40)
+                std::cerr << "FAILURE-CORRUPT BYTES" << std::endl;
+            }
+            else
+              std::cerr << "FAILURE-CORRUPT BYTES" << std::endl;
+            free(s_packet);
+            free(res_packet);
             break;
           }
         }
