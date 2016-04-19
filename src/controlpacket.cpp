@@ -461,7 +461,7 @@ int ControlPacket::setType(uint32_t *type)
 /*               If the ID is set successfully, 1 is returned               */
 /****************************************************************************/
 
-int ControlPacket::setSocketID(uint32_t *socketID)
+int ControlPacket::setSocketID(uint64_t *socketID)
 {
   if (socketID)
   {

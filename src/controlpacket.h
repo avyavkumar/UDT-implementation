@@ -21,7 +21,7 @@ protected:
   uint32_t *m_subsequence;                    // sub-sequence number
   uint32_t *m_timestamp;                      // timestamp information
   // uint32_t *m_controlInfo;                    // control information
-  uint32_t *m_socketID;                       // socket ID
+  uint64_t *m_socketID;                       // socket ID
   uint32_t *m_packetSeq;                      // ACK - received packets
   uint32_t *m_RTT;                            // ACK - RTT
   uint32_t *m_RTTVar;                         // ACK - RTTVar
@@ -55,11 +55,11 @@ public:
   int setSubsequence(uint32_t *subsequence);
   int setTimestamp(uint32_t *timestamp);
   int setControlInfo(ControlPacketType eType, uint32_t *controlinfo);
-  int setSocketID(uint32_t *socketID);
+  int setSocketID(uint64_t *socketID);
   uint32_t getType();
   uint32_t getExtendedType();
   uint32_t getSubsequence();
   uint32_t getTimestamp();
   uint32_t getControlInfo(uint32_t *information, int &size);
-  uint32_t getSocketID();
+  uint64_t getSocketID();
 };

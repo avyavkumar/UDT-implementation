@@ -22,7 +22,7 @@ protected:
   uint32_t *m_funcField;                      // function field
   uint32_t *m_orderBit;                       // order bit
   uint32_t *m_length;                         // length of the payload
-  uint32_t *m_socketID;                       // socketID
+  uint64_t *m_socketID;                       // socketID
   uint32_t layers[4];
 
 public:
@@ -37,12 +37,12 @@ public:
   int setTimestamp(uint32_t *timestamp);
   int setfuncField(uint32_t *funcField);
   int setOrderBit(uint32_t *orderBit);
-  int setSocketID(uint32_t *socketID);
+  int setSocketID(uint64_t *socketID);
   int extractPacket(char *final_packet, int length);
   uint32_t getSequence();
   uint32_t getfuncField();
   uint32_t getOrderBit();
   uint32_t getTimestamp();
   uint32_t getMessage();
-  uint32_t getSocketID();
+  uint64_t getSocketID();
 };

@@ -13,11 +13,12 @@ class UDTCore
 {
 public:
   static uint32_t current_socket;
-  static int _successConnectServer;
-  static int _successConnectClient;
-  static uint32_t _currFlowWindowSize;
-  static uint32_t _currPacketSize;
+  static std::vector < std::pair <uint32_t, uint32_t> > _successConnect;
+  static std::vector < std::pair <uint32_t, uint32_t> > _currFlowWindowSize;
+  static std::vector < std::pair <uint32_t, uint32_t> > _currPacketSize;
 
+  static std::vector < std::pair <uint32_t, DataPacket*> > LossList;                      // packets lost per socket
+  
   static std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
   static std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // latest timestamp
 
