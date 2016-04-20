@@ -752,7 +752,251 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
 /*             Returns 1 if everything has been recvd in order              */
 /****************************************************************************/
 
-int UDTCore::recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len)
+int UDTCore::recv(UDTSocket *socket, char* data)
 {
+  if (!data)
+  {
+    std::cerr << "ERROR-BUFFER EMPTY" << std::endl;
+    return -1;
+  }
+  DataPacket *packet[20];
+  char *buffer[20];
+  for (int i = 0; i < 20; i++)
+    packet[i] = new DataPacket();
+  for (int i = 0; i < 20; i++)
+    buffer[i] = (char *)malloc((MAXSIZE+16)*sizeof(char));
+  int size[20];
+  int packets = 0;
+  ControlPacket *c_packet = new ControlPacket();
+  uint32_t *type = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *etype = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *subseq = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *control_info = (uint32_t *)malloc(6*sizeof(uint32_t));
+  uint64_t *socketID = (uint64_t *)malloc(sizeof(uint64_t));
+  char *o_buffer[20];
 
+  for (int i = 0; i < 20; i++)
+    o_buffer[20] = (char *)malloc(MAXSIZE*sizeof(char));
+
+  while(1)
+  {
+    std::clock_t c_start = std::clock();
+    while (std::clock() - c_start < 20000);                            // Wait for some time for a response
+    int last = 0;
+    for (int i = 0; i < 20; i++)
+    {
+      size[i] = socket->ReceivePacket(buffer[i]);
+      if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+      {
+        packet[i]->extractPacket(buffer[i], size[i]);          // get as many packets as possible (max is 20)
+        packets++;
+        last = i;
+      }
+    }
+
+    // arrange packets by the sequence numbers received
+    DataPacket *temp = new DataPacket();
+    for (int i = 0; i < 20; i++)
+    {
+      for (int j = 0; j < (20-i); j++)
+      {
+        if (size[j] != -1)                                      // need to ensure that packets have been received
+        {
+          int k;
+          for (k = j+1; k < 20-i; k++)
+          {
+            if (size[k] != -1)
+              break;
+          }
+          if (packet[j]->getSequence() > packet[k]->getSequence() && k < (20-i))
+          {
+            temp = packet[j];
+            packet[j] = packet[k];
+            packet[k] = temp;
+          }
+        }
+      }
+    }
+    free(temp);
+    if (packets == 20 && packet[19]->getfuncField() == 1)
+    {
+      // everything okay, send an ACK signal, it is the last packet
+      // the congestion control stuff has been skipped for now
+      std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
+      it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+      if (it->second + 1 == packet[0]->getSequence() && it != m_LRSN.end())
+      {
+        *type = ACK;
+        *etype = 0xFFFFFFFF;
+        *subseq = 0xFFFFFFFF;                                    // subsequence is inconsequential
+        *timestamp = std::clock();
+        *socketID = socket->getSocketID();
+        control_info[0] = packet[19]->getSequence();             // last data packet sequence found
+
+        c_packet->setType(type);
+        c_packet->setExtendedType(etype);
+        c_packet->setSubsequence(sub);
+        c_packet->setControlInfo(ACK, control_info);
+        c_packet->setTimestamp(timestamp);
+        c_packet->setSocketID(socketID);
+
+        char *final_packet = (char *)malloc(40*sizeof(char));
+        int length = c_packet->makePacket(final_packet);
+        int _step = 0;
+        while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
+        if (_step >= 20)
+        {
+          std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
+          return -1;
+        }
+        erase(it);
+        m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
+        free(final_packet);
+      }
+      // we have sent the ACK, now we need to write the information to buffer
+      // to do so, we create a binar file, and dump all the contents into that file
+      // once the contents have been transferred and read, the file is removed
+      FILE* pFile;
+      pFile = fopen("file.bin", "wb");
+      for (int i = 0; i < 20; i++)
+      {
+
+      }
+      break;
+    }
+
+    else if (packets == 20 && packet[19]->getfuncField() != 1)
+    {
+      // send an ACK signal, it is not the last packet
+      // the congestion control stuff has been skipped for now
+      std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
+      it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+      if (it->second + 1 == packet[0]->getSequence() && it != m_LRSN.end())
+      {
+        *type = ACK;
+        *etype = 0xFFFFFFFF;
+        *subseq = 0xFFFFFFFF;                                    // subsequence is inconsequential
+        *timestamp = std::clock();
+        *socketID = socket->getSocketID();
+        control_info[0] = packet[19]->getSequence();             // last data packet sequence found
+
+        c_packet->setType(type);
+        c_packet->setExtendedType(etype);
+        c_packet->setSubsequence(sub);
+        c_packet->setControlInfo(ACK, control_info);
+        c_packet->setTimestamp(timestamp);
+        c_packet->setSocketID(socketID);
+
+        char *final_packet = (char *)malloc(40*sizeof(char));
+        int length = c_packet->makePacket(final_packet);
+        int _step = 0;
+        while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
+        if (_step >= 20)
+        {
+          std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
+          return -1;
+        }
+        erase(it);
+        m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
+        free(final_packet);
+      }
+    }
+
+    else if (packets < 20 && packets > 0)
+    {
+      if (packet[last]->getfuncField() == 1)
+      {
+        std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
+        it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+        if (it != m_LRSN.end())
+        {
+          uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
+          last_seq = it->second;
+          if (last_seq + packets == packet[last]->getSequence())
+          {
+            // this is the last packet and we have gotten all the packets correctly
+            // send the ACK
+
+            *type = ACK;
+            *etype = 0xFFFFFFFF;
+            *subseq = 0xFFFFFFFF;                                    // subsequence is inconsequential
+            *timestamp = std::clock();
+            *socketID = socket->getSocketID();
+            control_info[0] = packet[19]->getSequence();             // last data packet sequence found
+
+            c_packet->setType(type);
+            c_packet->setExtendedType(etype);
+            c_packet->setSubsequence(sub);
+            c_packet->setControlInfo(ACK, control_info);
+            c_packet->setTimestamp(timestamp);
+            c_packet->setSocketID(socketID);
+            char *final_packet = (char *)malloc(40*sizeof(char));
+            int length = c_packet->makePacket(final_packet);
+            int _step = 0;
+            while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
+            if (_step >= 20)
+            {
+              std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
+              return -1;
+            }
+            erase(it);
+            m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
+            free(final_packet);
+          }
+        }
+        break;
+      }
+      else if (packet[last]->getfuncField() != 1)
+      {
+        std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
+        it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+        if (it != m_LRSN.end())
+        {
+          uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
+          *last_seq = it->second;
+          // send a NAK till the last packet received
+          // check the difference with the LRSN value
+          for (int i = 0; i < 20; i++)
+          {
+            *type = NAK;
+            *etype = 0xFFFFFFFF;
+            *subseq = 0xFFFFFFFF;                                    // subsequence is inconsequential
+            *timestamp = std::clock();
+            *socketID = socket->getSocketID();
+            if (size[i] == -1)
+              control_info[0] = packet[i]->getSequence();            // last data packet sequence found
+
+            c_packet->setType(type);
+            c_packet->setExtendedType(etype);
+            c_packet->setSubsequence(sub);
+            c_packet->setControlInfo(NAK, control_info);
+            c_packet->setTimestamp(timestamp);
+            c_packet->setSocketID(socketID);
+
+            char *final_packet = (char *)malloc(40*sizeof(char));
+            int length = c_packet->makePacket(final_packet);
+            int _step = 0;
+            while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
+            if (_step >= 20)
+            {
+              std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
+              return -1;
+            }
+            free(final_packet);
+          }
+        }
+      }
+    }
+
+  }
+
+  free(type);
+  free(etype);
+  free(subseq);
+  free(timestamp);
+  free(socketID);
+  for (int i = 0; i < 6; i++)
+    free(control_info[i]);
+  free(c_packet);
 }

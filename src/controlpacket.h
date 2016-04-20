@@ -20,7 +20,6 @@ protected:
   uint32_t *m_extendedtype;                   // extended type
   uint32_t *m_subsequence;                    // sub-sequence number
   uint32_t *m_timestamp;                      // timestamp information
-  // uint32_t *m_controlInfo;                    // control information
   uint64_t *m_socketID;                       // socket ID
   uint32_t *m_packetSeq;                      // ACK - received packets
   uint32_t *m_RTT;                            // ACK - RTT

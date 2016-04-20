@@ -5,7 +5,6 @@
 #include <utility>
 #include <chrono>
 #include <ctime>
-#include <stdint.h>
 #include <vector>
 #include <algorithm>
 
@@ -17,12 +16,12 @@ public:
   static std::vector < std::pair <uint64_t, uint32_t> > _currFlowWindowSize;
   static std::vector < std::pair <uint64_t, uint32_t> > _currPacketSize;
 
-  static std::vector < std::pair <uint64_t, DataPacket> > LossList;                      // packets lost per socket
+  static std::vector < std::pair <uint64_t, DataPacket> > LossList;                       // packets lost per socket
 
   static std::vector < std::pair <uint64_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
   static std::vector < std::pair <uint64_t, uint32_t> > m_timestamp;                      // latest timestamp
 
-  static std::vector < std::pair <uint64_t, uint32_t> > m_packetSeq;                      // ACK - received packets
+  static std::vector < std::pair <uint64_t, uint32_t> > m_LRSN;                           // ACK - received packets
   static std::vector < std::pair <uint64_t, uint32_t> > m_RTT;                            // ACK - RTT
   static std::vector < std::pair <uint64_t, uint32_t> > m_RTTVar;                         // ACK - RTTVar
   static std::vector < std::pair <uint64_t, uint32_t> > m_availBuffer;                    // ACK - available buffer
@@ -54,7 +53,7 @@ public:
   static int recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
   // TODO - write a sendmsg method
   // TODO - write a recvmsg method
-  
+
   /*
   // Functionality:
   //    Start listening to any connection request.
