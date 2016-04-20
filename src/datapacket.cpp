@@ -41,7 +41,7 @@ m_socketID(NULL)
   m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
   m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
-  m_socketID = (uint32_t *)malloc(sizeof(uint32_t));
+  m_socketID = (uint64_t *)malloc(sizeof(uint64_t));
   m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
 }
 
@@ -182,7 +182,7 @@ int DataPacket::setSequence(uint32_t *sequence)
 /*          If the socketID is set successfully, 1 is returned              */
 /****************************************************************************/
 
-int DataPacket::setSocketID(uint32_t *socketID)
+int DataPacket::setSocketID(uint64_t *socketID)
 {
   if (socketID)
   {
@@ -351,7 +351,7 @@ uint32_t DataPacket::getTimestamp()
     return -1;
 }
 
-uint32_t DataPacket::getSocketID()
+uint64_t DataPacket::getSocketID()
 {
   if (m_socketID)
     return *m_socketID;

@@ -39,7 +39,7 @@ m_socketID(NULL)
   m_extendedtype = (uint32_t *)malloc(sizeof(uint32_t));
   m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   m_subsequence = (uint32_t *)malloc(sizeof(uint32_t));
-  m_socketID = (uint32_t *)malloc(sizeof(uint32_t));
+  m_socketID = (uint64_t *)malloc(sizeof(uint64_t));
   m_packetSeq = (uint32_t *)malloc(sizeof(uint32_t));
   m_RTT = (uint32_t *)malloc(sizeof(uint32_t));
   m_RTTVar = (uint32_t *)malloc(sizeof(uint32_t));
@@ -647,7 +647,7 @@ uint32_t ControlPacket::getControlInfo(uint32_t *information, int &size)
     return -1;
 }
 
-uint32_t ControlPacket::getSocketID()
+uint64_t ControlPacket::getSocketID()
 {
   if (m_socketID)
     return *m_socketID;

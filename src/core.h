@@ -12,46 +12,49 @@
 class UDTCore
 {
 public:
-  static uint32_t current_socket;
-  static std::vector < std::pair <uint32_t, uint32_t> > _successConnect;
-  static std::vector < std::pair <uint32_t, uint32_t> > _currFlowWindowSize;
-  static std::vector < std::pair <uint32_t, uint32_t> > _currPacketSize;
+  static uint64_t current_socket;
+  static std::vector < std::pair <uint64_t, uint32_t> > _successConnect;
+  static std::vector < std::pair <uint64_t, uint32_t> > _currFlowWindowSize;
+  static std::vector < std::pair <uint64_t, uint32_t> > _currPacketSize;
 
-  static std::vector < std::pair <uint32_t, DataPacket*> > LossList;                      // packets lost per socket
-  
-  static std::vector < std::pair <uint32_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
-  static std::vector < std::pair <uint32_t, uint32_t> > m_timestamp;                      // latest timestamp
+  static std::vector < std::pair <uint64_t, DataPacket> > LossList;                      // packets lost per socket
 
-  static std::vector < std::pair <uint32_t, uint32_t> > m_packetSeq;                      // ACK - received packets
-  static std::vector < std::pair <uint32_t, uint32_t> > m_RTT;                            // ACK - RTT
-  static std::vector < std::pair <uint32_t, uint32_t> > m_RTTVar;                         // ACK - RTTVar
-  static std::vector < std::pair <uint32_t, uint32_t> > m_availBuffer;                    // ACK - available buffer
-  static std::vector < std::pair <uint32_t, uint32_t> > m_packRecvRate;                   // ACK - packet receiving rate
-  static std::vector < std::pair <uint32_t, uint32_t> > m_linkCap;                        // ACK - link capacity
-  static std::vector < std::pair <uint32_t, uint32_t> > m_Version;                        // HS - UDT version
-  static std::vector < std::pair <uint32_t, uint32_t> > m_Type;                           // HS - UDT socket type
-  static std::vector < std::pair <uint32_t, uint32_t> > m_ISN;                            // HS - random initial sequence number
-  static std::vector < std::pair <uint32_t, uint32_t> > m_MSS;                            // HS - maximum segment size
-  static std::vector < std::pair <uint32_t, uint32_t> > m_FlightFlagSize;                 // HS - flow control window size
-  static std::vector < std::pair <uint32_t, uint32_t> > m_ReqType;                        // HS - connection request type:
+  static std::vector < std::pair <uint64_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
+  static std::vector < std::pair <uint64_t, uint32_t> > m_timestamp;                      // latest timestamp
+
+  static std::vector < std::pair <uint64_t, uint32_t> > m_packetSeq;                      // ACK - received packets
+  static std::vector < std::pair <uint64_t, uint32_t> > m_RTT;                            // ACK - RTT
+  static std::vector < std::pair <uint64_t, uint32_t> > m_RTTVar;                         // ACK - RTTVar
+  static std::vector < std::pair <uint64_t, uint32_t> > m_availBuffer;                    // ACK - available buffer
+  static std::vector < std::pair <uint64_t, uint32_t> > m_packRecvRate;                   // ACK - packet receiving rate
+  static std::vector < std::pair <uint64_t, uint32_t> > m_linkCap;                        // ACK - link capacity
+  static std::vector < std::pair <uint64_t, uint32_t> > m_Version;                        // HS - UDT version
+  static std::vector < std::pair <uint64_t, uint32_t> > m_Type;                           // HS - UDT socket type
+  static std::vector < std::pair <uint64_t, uint32_t> > m_ISN;                            // HS - random initial sequence number
+  static std::vector < std::pair <uint64_t, uint32_t> > m_MSS;                            // HS - maximum segment size
+  static std::vector < std::pair <uint64_t, uint32_t> > m_FlightFlagSize;                 // HS - flow control window size
+  static std::vector < std::pair <uint64_t, uint32_t> > m_ReqType;                        // HS - connection request type:
                                                                                           //  1: regular connection request,
                                                                                           //  0: rendezvous connection request,
                                                                                           //  -1/-2: response
-  static std::vector < std::pair <uint32_t, uint32_t> > m_LossInfo;                       // NAK - loss list
-  static std::vector < std::pair <uint32_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
-  static std::vector < std::pair <uint32_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
+  static std::vector < std::pair <uint64_t, uint32_t> > m_LossInfo;                       // NAK - loss list
+  static std::vector < std::pair <uint64_t, uint32_t> > m_firstMessage;                   // Message Drop - First Message
+  static std::vector < std::pair <uint64_t, uint32_t> > m_lastMessage;                    // Message Drop - Last Message
 
-  static std::vector < std::pair <uint32_t, sockaddr_in> > m_activeConn;                  // list of active connections
-  static uint32_t hash(uint32_t x);
+  static std::vector < std::pair <uint64_t, sockaddr_in> > m_activeConn;                  // list of active connections
+  static uint64_t hash(uint64_t x);
 
   UDTCore();
   static UDTSocket* open(int conn_type, int port);
   static void connect(UDTSocket *socket, const sockaddr_in *peer);
   static void connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket *rec_packet);
   // TODO - implement a method for rendezvous connection
-  // TODO - write a sendmsg and recvmsg method
   static void close(UDTSocket *socket, const sockaddr_in *peer);
-
+  static int send(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
+  static int recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
+  // TODO - write a sendmsg method
+  // TODO - write a recvmsg method
+  
   /*
   // Functionality:
   //    Start listening to any connection request.
