@@ -45,4 +45,5 @@ public:
   uint32_t getTimestamp();
   uint32_t getMessage();
   uint64_t getSocketID();
+  uint32_t getPayload(char *buffer, int length);
 };

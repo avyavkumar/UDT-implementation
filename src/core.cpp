@@ -752,7 +752,7 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
 /*             Returns 1 if everything has been recvd in order              */
 /****************************************************************************/
 
-int UDTCore::recv(UDTSocket *socket, char* data)
+int UDTCore::recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int length)
 {
   if (!data)
   {
@@ -774,10 +774,6 @@ int UDTCore::recv(UDTSocket *socket, char* data)
   uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *control_info = (uint32_t *)malloc(6*sizeof(uint32_t));
   uint64_t *socketID = (uint64_t *)malloc(sizeof(uint64_t));
-  char *o_buffer[20];
-
-  for (int i = 0; i < 20; i++)
-    o_buffer[20] = (char *)malloc(MAXSIZE*sizeof(char));
 
   while(1)
   {
@@ -794,6 +790,9 @@ int UDTCore::recv(UDTSocket *socket, char* data)
         last = i;
       }
     }
+
+    if (!packets)
+      continue;
 
     // arrange packets by the sequence numbers received
     DataPacket *temp = new DataPacket();
@@ -836,7 +835,7 @@ int UDTCore::recv(UDTSocket *socket, char* data)
 
         c_packet->setType(type);
         c_packet->setExtendedType(etype);
-        c_packet->setSubsequence(sub);
+        c_packet->setSubsequence(subseq);
         c_packet->setControlInfo(ACK, control_info);
         c_packet->setTimestamp(timestamp);
         c_packet->setSocketID(socketID);
@@ -850,19 +849,26 @@ int UDTCore::recv(UDTSocket *socket, char* data)
           std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
           return -1;
         }
-        erase(it);
+        m_LRSN.erase(it);
         m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
         free(final_packet);
       }
       // we have sent the ACK, now we need to write the information to buffer
-      // to do so, we create a binar file, and dump all the contents into that file
+      // to do so, we create a binary file, and dump all the contents into that file
       // once the contents have been transferred and read, the file is removed
-      FILE* pFile;
-      pFile = fopen("file.bin", "wb");
+      std::fstream myfile;
+      myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
       for (int i = 0; i < 20; i++)
       {
-
+        if (size[i] != -1)
+        {
+          char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
+          int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
+          myfile << s_buffer;
+          free(s_buffer);
+        }
       }
+      myfile.close();
       break;
     }
 
@@ -883,7 +889,7 @@ int UDTCore::recv(UDTSocket *socket, char* data)
 
         c_packet->setType(type);
         c_packet->setExtendedType(etype);
-        c_packet->setSubsequence(sub);
+        c_packet->setSubsequence(subseq);
         c_packet->setControlInfo(ACK, control_info);
         c_packet->setTimestamp(timestamp);
         c_packet->setSocketID(socketID);
@@ -897,10 +903,26 @@ int UDTCore::recv(UDTSocket *socket, char* data)
           std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
           return -1;
         }
-        erase(it);
+        m_LRSN.erase(it);
         m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
         free(final_packet);
       }
+      // packets received are in order
+      // to do so, we create a binary file, and dump all the contents into that file
+      // once the contents have been transferred and read, the file is removed
+      std::fstream myfile;
+      myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
+      for (int i = 0; i < 20; i++)
+      {
+        if (size[i] != -1)
+        {
+          char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
+          int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
+          myfile << s_buffer;
+          free(s_buffer);
+        }
+      }
+      myfile.close();
     }
 
     else if (packets < 20 && packets > 0)
@@ -912,8 +934,8 @@ int UDTCore::recv(UDTSocket *socket, char* data)
         if (it != m_LRSN.end())
         {
           uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
-          last_seq = it->second;
-          if (last_seq + packets == packet[last]->getSequence())
+          *last_seq = it->second;
+          if (*last_seq + packets == packet[last]->getSequence())
           {
             // this is the last packet and we have gotten all the packets correctly
             // send the ACK
@@ -927,7 +949,7 @@ int UDTCore::recv(UDTSocket *socket, char* data)
 
             c_packet->setType(type);
             c_packet->setExtendedType(etype);
-            c_packet->setSubsequence(sub);
+            c_packet->setSubsequence(subseq);
             c_packet->setControlInfo(ACK, control_info);
             c_packet->setTimestamp(timestamp);
             c_packet->setSocketID(socketID);
@@ -940,10 +962,26 @@ int UDTCore::recv(UDTSocket *socket, char* data)
               std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
               return -1;
             }
-            erase(it);
+            m_LRSN.erase(it);
             m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
             free(final_packet);
           }
+          // we have sent the ACK, now we need to write the information to buffer
+          // to do so, we create a binary file, and dump all the contents into that file
+          // once the contents have been transferred and read, the file is removed
+          std::fstream myfile;
+          myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
+          for (int i = 0; i < 20; i++)
+          {
+            if (size[i] != -1)
+            {
+              char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
+              int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
+              myfile << s_buffer;
+              free(s_buffer);
+            }
+          }
+          myfile.close();
         }
         break;
       }
@@ -969,7 +1007,7 @@ int UDTCore::recv(UDTSocket *socket, char* data)
 
             c_packet->setType(type);
             c_packet->setExtendedType(etype);
-            c_packet->setSubsequence(sub);
+            c_packet->setSubsequence(subseq);
             c_packet->setControlInfo(NAK, control_info);
             c_packet->setTimestamp(timestamp);
             c_packet->setSocketID(socketID);
@@ -988,8 +1026,18 @@ int UDTCore::recv(UDTSocket *socket, char* data)
         }
       }
     }
-
   }
+  std::fstream myfile;
+  myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
+  std::streampos _size = myfile.tellg();
+  if (length < _size)
+  {
+    std::cerr << "ERROR-BUFFER DOESN'T CONTAIN ENOUGH MEMORY" << std::endl;
+    return -1;
+  }
+  myfile.seekg(0, std::ios::beg);
+  myfile.read(data, _size);
+  myfile.close();
 
   free(type);
   free(etype);
@@ -997,6 +1045,7 @@ int UDTCore::recv(UDTSocket *socket, char* data)
   free(timestamp);
   free(socketID);
   for (int i = 0; i < 6; i++)
-    free(control_info[i]);
+    free(control_info+i);
   free(c_packet);
+  return (int)_size;
 }

@@ -7,6 +7,8 @@
 #include <ctime>
 #include <vector>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 class UDTCore
 {
@@ -50,9 +52,7 @@ public:
   // TODO - implement a method for rendezvous connection
   static void close(UDTSocket *socket, const sockaddr_in *peer);
   static int send(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
-  static int recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
-  // TODO - write a sendmsg method
-  // TODO - write a recvmsg method
+  static int recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int length);
 
   /*
   // Functionality:

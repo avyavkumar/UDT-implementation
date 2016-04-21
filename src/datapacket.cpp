@@ -358,3 +358,15 @@ uint64_t DataPacket::getSocketID()
   else
     return -1;
 }
+
+uint32_t DataPacket::getPayload(char *buffer, int length)
+{
+  if (buffer != NULL && length >= *m_length)
+  {
+    for (int i = 0; i < *m_length; i++)
+      *(buffer+i) = *(m_packetData+i);
+    return *m_length;
+  }
+  else
+    return -1;
+}
