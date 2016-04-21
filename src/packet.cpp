@@ -11,6 +11,6 @@ PacketType getFlag(char *packet, int length)
     return ERROR;
   else if (((packet[39] >> 7) & 0x1 == 1) && length == 40)
     return CONTROL;
-  else if (((packet[39] >> 7) & 0x1 == 0) && length == 40)
+  else if ((((packet[39] >> 7) & 0x1 == 0) && length == 40) || length != 40)
     return DATA;
 }

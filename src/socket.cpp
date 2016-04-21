@@ -114,10 +114,6 @@ int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer, int lengt
     return -1;
   }
 
-  // maintain bookkeeping data of the sent data
-  // if (std::find(m_storageSent.begin(), m_storageSent.end(), peer) != m_storageSent.end())
-  //   m_storageSent.push_back(peer);
-
   return nBytes;
 }
 
@@ -127,11 +123,10 @@ int UDTSocket::SendPacket(const struct sockaddr_in peer, char *buffer, int lengt
 /*            Returns -1 if unsuccessful; bytes received if successful      */
 /****************************************************************************/
 
-int UDTSocket::ReceivePacket(char *buffer)
+int UDTSocket::ReceivePacket(char *buffer, struct sockaddr_in *client_address)
 {
   // TODO - Streamline with both IPv4 and IPv6
-  struct sockaddr_in client_address;
-  socklen_t addr_size = sizeof(client_address);
+  socklen_t addr_size = sizeof(sockaddr_in);
   int nBytes;
   try
   {
@@ -139,7 +134,7 @@ int UDTSocket::ReceivePacket(char *buffer)
     timeout.tv_sec = 10;                                    // timeout after 10 seconds
     timeout.tv_usec = 0;
     setsockopt(m_socketid, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(struct timeval));
-    nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)&client_address, &addr_size);
+    nBytes = recvfrom(m_socketid,buffer,MAXSIZE,0,(struct sockaddr *)client_address, &addr_size);
     if (nBytes == -1)
       throw std::exception();
   }
@@ -151,10 +146,6 @@ int UDTSocket::ReceivePacket(char *buffer)
   }
 
   return nBytes;
-  // maintain bookkeeping data of the received data
-
-  // if (std::find(m_storageRecv.begin(), m_storageRecv.end(), client_address) != m_storageRecv.end())
-  //   m_storageRecv.push_back(client_address);
 }
 
 /****************************************************************************/

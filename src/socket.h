@@ -38,7 +38,7 @@ public:
   int newSocket(int family, int port);
   int SendPacket(const struct sockaddr_in peer, char *buffer, int length);
   int bindSocket(int port);
-  int ReceivePacket(char *buffer);
+  int ReceivePacket(char *buffer, struct sockaddr_in *peer);
   uint64_t getSocketID();
   int getFamily();
 };

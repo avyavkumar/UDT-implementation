@@ -10,6 +10,13 @@
 #include <fstream>
 #include <iostream>
 
+typedef struct _rec_buffer
+{
+  uint64_t m_socketID;
+  uint32_t m_length;
+  char *m_buffer;
+} rec_buffer;
+
 class UDTCore
 {
 public:
@@ -22,6 +29,8 @@ public:
 
   static std::vector < std::pair <uint64_t, uint32_t> > m_subsequence;                    // subsequence of the last packet sent/recv
   static std::vector < std::pair <uint64_t, uint32_t> > m_timestamp;                      // latest timestamp
+
+  static std::vector <rec_buffer *> m_recPackets;                                         // store buffer of received packets by server
 
   static std::vector < std::pair <uint64_t, uint32_t> > m_LRSN;                           // ACK - received packets
   static std::vector < std::pair <uint64_t, uint32_t> > m_RTT;                            // ACK - RTT
@@ -47,42 +56,15 @@ public:
 
   UDTCore();
   static UDTSocket* open(int conn_type, int port);
-  static void connect(UDTSocket *socket, const sockaddr_in *peer);
-  static void connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket *rec_packet);
-  // TODO - implement a method for rendezvous connection
-  static void close(UDTSocket *socket, const sockaddr_in *peer);
+  static void connect(UDTSocket *socket, const struct sockaddr_in *peer);
+  static void connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r_packet);
   static int send(UDTSocket *socket, const struct sockaddr_in peer, char* data, int len);
-  static int recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int length);
+  static int recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, char* data, char* _data, int r_size, int &length);
+  static void close(UDTSocket *socket, const struct sockaddr_in *peer);
+  static void listen(UDTSocket *socket, struct sockaddr_in *peer);
+  // TODO - implement a method for rendezvous connection
 
   /*
-  // Functionality:
-  //    Start listening to any connection request.
-  // Parameters:
-  //    None.
-  // Returned value:
-  //    None.
-
-  void listen();
-
-  // Functionality:
-  //    Request UDT to send out a data block "data" with size of "len".
-  // Parameters:
-  //    0) [in] data: The address of the application data to be sent.
-  //    1) [in] len: The size of the data block.
-  // Returned value:
-  //    Actual size of data sent.
-
-  int send(const char* data, int len);
-
-  // Functionality:
-  //    Request UDT to receive data to a memory block "data" with size of "len".
-  // Parameters:
-  //    0) [out] data: data received.
-  //    1) [in] len: The desired size of data to be received.
-  // Returned value:
-  //    Actual size of data received.
-
-  int recv(char* data, int len);
 
   // Functionality:
   //    send a message of a memory block "data" with size of "len".

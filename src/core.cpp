@@ -2,6 +2,38 @@
 
 uint64_t UDTCore::current_socket = 0;
 
+std::vector < rec_buffer* > UDTCore::m_recPackets;
+
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::_successConnect;
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::_currFlowWindowSize;
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::_currPacketSize;
+
+std::vector < std::pair <uint64_t, DataPacket> > UDTCore::LossList;                       // packets lost per socket
+
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_subsequence;                    // subsequence of the last packet sent/recv
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_timestamp;                      // latest timestamp
+
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_LRSN;                           // ACK - received packets
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_RTT;                            // ACK - RTT
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_RTTVar;                         // ACK - RTTVar
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_availBuffer;                    // ACK - available buffer
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_packRecvRate;                   // ACK - packet receiving rate
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_linkCap;                        // ACK - link capacity
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_Version;                        // HS - UDT version
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_Type;                           // HS - UDT socket type
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_ISN;                            // HS - random initial sequence number
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_MSS;                            // HS - maximum segment size
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_FlightFlagSize;                 // HS - flow control window size
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_ReqType;                        // HS - connection request type:
+                                                                                          //  1: regular connection request,
+                                                                                          //  0: rendezvous connection request,
+                                                                                          //  -1/-2: response
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_LossInfo;                       // NAK - loss list
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_firstMessage;                   // Message Drop - First Message
+std::vector < std::pair <uint64_t, uint32_t> > UDTCore::m_lastMessage;                    // Message Drop - Last Message
+
+std::vector < std::pair <uint64_t, sockaddr_in> > UDTCore::m_activeConn;                  // list of active connections
+
 struct CompareFirstSock
 {
   CompareFirstSock(uint64_t val) : val_(val) {}
@@ -40,8 +72,6 @@ uint64_t UDTCore::hash(uint64_t x)
     return x;
 }
 
-UDTCore::UDTCore() {}
-
 /****************************************************************************/
 /*                                  open()                                  */
 /*            Returns a pointer to UDTSocket if sucessful binding           */
@@ -77,7 +107,7 @@ UDTSocket* UDTCore::open(int conn_type, int port)
 /*   Basically used by client in a client-server role to connect to server  */
 /****************************************************************************/
 
-void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
+void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer)
 {
   if (!socket || !peer)
   {
@@ -101,7 +131,7 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
   *timestamp = std::clock(); // timer mechanism
   *socketID = socket->getSocketID();
 
-  controlInfo[0] = 4;                                              // HS - UDT version
+  controlInfo[0] = 4;                                             // HS - UDT version
   controlInfo[1] = socket->getFamily();                           // HS - UDT Socket type - 0 - and 1-
   controlInfo[2] = *subsequence;                                  // HS - random initial seq #
   controlInfo[3] = MAXSIZE;                                       // HS - maximum segment size
@@ -146,37 +176,25 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
     return;
   }
 
-  // free memory
-  free(type);
-  free(extendedtype);
-  free(subsequence);
-  free(timestamp);
-  free(socketID);
-  for (int i = 0; i < 6; i++)
-    free(controlInfo+i);
-
   // extract the packet into a (char*) buffer and send it
 
   char *s_packet = (char *)malloc(40*sizeof(char));           // buffer for sending the packet
   char *r_packet = (char *)malloc(40*sizeof(char));           // buffer for receiving the packet
-  int _bytes = packet->extractPacket(s_packet);
+  int _bytes = packet->makePacket(s_packet);
   int _step = 0;
   uint32_t can_connect = 0;
   do
   {
     // send the HANDSHAKEing packet
-    int _sent = socket->SendPacket(*peer, s_packet, _bytes);
+    int _sent = socket->SendPacket(*peer, s_packet, 40);
     if (_sent != 40)
     {
       std::cerr << "ERR-CORRUPT BYTES" << std::endl;
       return;
     }
-    // intialise the timer
-    std::clock_t c_start = std::clock();
-    while (std::clock() - c_start < 1000);
-
     // Wait for the return - timer version
-    int _recv = socket->ReceivePacket(r_packet);
+    struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+    int _recv = socket->ReceivePacket(r_packet, client);
     // 40 bytes for control packet; acts as a check
     if (_recv == 40)
     {
@@ -232,10 +250,61 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
   if (can_connect == 0)
     std::cerr << "ERROR-CONNECTION" << std::endl;
 
+  // free memory
   free(packet);
   free(rec_packet);
   free(s_packet);
   free(r_packet);
+  free(type);
+  free(extendedtype);
+  free(subsequence);
+  free(timestamp);
+  free(socketID);
+  free(controlInfo);
+}
+
+/****************************************************************************/
+/*                                 listen()                                 */
+/*              Listens to a peer given by the input parameter              */
+/*                      Used EXCLUSIVELY by the server                      */
+/*    Used only for control packet types; user/server explicitly needs      */
+/*                  to call recv() for data packet types                    */
+/****************************************************************************/
+
+void UDTCore::listen(UDTSocket *socket, struct sockaddr_in *peer)
+{
+  char *buffer = (char *)malloc(40*sizeof(char));
+  // control packet
+  int size = socket->ReceivePacket(buffer,peer);
+  if (getFlag(buffer, size) == CONTROL)
+  {
+    ControlPacket *packet = new ControlPacket();
+    int check = packet->extractPacket(buffer);
+    if (packet->getType() == HANDSHAKE)
+      UDTCore::connect(socket, peer, buffer);
+    else if (packet->getPacketType() == ShutDown)
+    {
+      //remove the peer from the list of active connections
+      std::vector< std::pair <uint64_t, sockaddr_in> >::iterator it;
+      it = std::find_if(m_activeConn.begin(), m_activeConn.end(), CompareFirstSock(hash(peer->sin_addr.s_addr)));
+      if (it != m_activeConn.end())
+        m_activeConn.erase(it);
+    }
+  }
+  if (getFlag(buffer, size) == DATA)
+  {
+    int length = 0;
+    char *data;
+    int _length = UDTCore::recv(0,socket,*peer,data,buffer,size,length);
+    if (length > 0)
+    {
+      rec_buffer *r_buffer = (rec_buffer *)malloc(sizeof(rec_buffer));
+      r_buffer->m_socketID = hash(socket->getSocketID());
+      r_buffer->m_length = length;
+      r_buffer->m_buffer = data;
+      m_recPackets.push_back(r_buffer);
+    }
+  }
 }
 
 /****************************************************************************/
@@ -246,25 +315,22 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer)
 
 // TODO - intial subsequence number as well as timers
 
-void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket *rec_packet)
+void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r_packet)
 {
-  if (!peer || !rec_packet)
+  if (!peer || !r_packet)
   {
     std::cerr << "SOCKET/PEER ARE UNALLOC" << std::endl;
     return;
   }
   int _step = 0;
   uint32_t can_connect = 0;
+  struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+  ControlPacket *rec_packet = new ControlPacket();
   do
   {
-    // intialise the timer
-    std::clock_t c_start = std::clock();
-    while (std::clock() - c_start < 1000);
-
-    char *r_packet = (char *)malloc(40*sizeof(char));
     int _recv = rec_packet->extractPacket(r_packet);
     // 40 bytes for control packet; acts as a check
-    if (_recv == 40)
+    if (_recv == 1)
     {
       // get the flag bit of the packet; check if control bit
       if (getFlag(r_packet, 40) == CONTROL)
@@ -373,8 +439,7 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket 
               free(subsequence);
               free(timestamp);
               free(socketID);
-              for (int i = 0; i < 6; i++)
-                free(controlInfo+i);
+              free(controlInfo);
               char *s_packet = (char *)malloc(40*sizeof(char));
               int _bytes_made = res_packet->makePacket(s_packet);
               if (_bytes_made == 40)
@@ -406,7 +471,7 @@ void UDTCore::connect(UDTSocket *socket, const sockaddr_in *peer, ControlPacket 
 /*                    Closes the connection with a peer                     */
 /****************************************************************************/
 
-void UDTCore::close(UDTSocket *socket, const sockaddr_in *peer)
+void UDTCore::close(UDTSocket *socket, const struct sockaddr_in *peer)
 {
   if (!socket || !peer)
   {
@@ -465,16 +530,16 @@ void UDTCore::close(UDTSocket *socket, const sockaddr_in *peer)
   free(socketID);
 
   char *s_packet = (char *)malloc(40*sizeof(char));           // buffer for sending the packet
-  int _bytes = packet->extractPacket(s_packet);
+  int _bytes = packet->makePacket(s_packet);
   int _step = 0;
-
+  int _sent;
   do
   {
-    int _sent = socket->SendPacket(*peer, s_packet, _bytes);
+    _sent = socket->SendPacket(*peer, s_packet, _bytes);
     if (_sent != 40)
       std::cerr << "ERROR-CORRUPT BYTES, TRYING AGAIN..." << std::endl;
     _step++;
-  } while (_step < 20);                         // try this 20 times
+  } while (_step < 20 && _sent != 40);                         // try this 20 times
 
   if (_step == 20)
     std::cerr << "ERROR-COULD NOT SHUT CONNECTION" << std::endl;
@@ -638,9 +703,10 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
     char *recv_packet = (char *)malloc(40*sizeof(char));
 
     int size = 0;
-    size = socket->ReceivePacket(recv_packet);
+    struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+    size = socket->ReceivePacket(recv_packet, client);
     ControlPacket *c_packet = new ControlPacket();
-    if (c_packet->extractPacket(recv_packet) == -1)
+    if (size == -1)
     {
       // nothing received, must retransmit the packets
       packets-=i;
@@ -729,7 +795,7 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
             }
           }
         }
-        size = socket->ReceivePacket(recv_packet);              // Try to get all the NACK packets
+        size = socket->ReceivePacket(recv_packet, client);              // Try to get all the NACK packets
       }
     }
   }
@@ -752,13 +818,23 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
 /*             Returns 1 if everything has been recvd in order              */
 /****************************************************************************/
 
-int UDTCore::recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, int length)
+int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, char* data, char* _data, int r_size, int &length)
 {
-  if (!data)
-  {
-    std::cerr << "ERROR-BUFFER EMPTY" << std::endl;
-    return -1;
-  }
+  #ifndef CLIENT_M
+  #define CLIENT_M 1
+  #endif
+
+  #ifndef SERVER_M
+  #define SERVER_M 0
+  #endif
+
+  if (mode == CLIENT_M)
+    if (!data || !length <= 0)
+    {
+      std::cerr << "ERROR-INIT BUFFER EMPTY" << std::endl;
+      return -1;
+    }
+
   DataPacket *packet[20];
   char *buffer[20];
   for (int i = 0; i < 20; i++)
@@ -774,20 +850,49 @@ int UDTCore::recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
   uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *control_info = (uint32_t *)malloc(6*sizeof(uint32_t));
   uint64_t *socketID = (uint64_t *)malloc(sizeof(uint64_t));
-
+  int _first = 0;
   while(1)
   {
     std::clock_t c_start = std::clock();
     while (std::clock() - c_start < 20000);                            // Wait for some time for a response
     int last = 0;
-    for (int i = 0; i < 20; i++)
+    struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+
+    if (mode == SERVER_M && _first == 0)
     {
-      size[i] = socket->ReceivePacket(buffer[i]);
-      if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+      size[0] = r_size;
+      for (int i = 0; i < r_size; i++)
+        buffer[0][i] = _data[i];
+
+      if (size[0] != -1 && getFlag(buffer[0],size[0]) == DATA)
       {
-        packet[i]->extractPacket(buffer[i], size[i]);          // get as many packets as possible (max is 20)
+        packet[0]->extractPacket(buffer[0], size[0]);                  // get packet<0>
         packets++;
-        last = i;
+      }
+      for (int i = 1; i < 20; i++)
+      {
+        size[i] = socket->ReceivePacket(buffer[i], client);
+        if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+        {
+          packet[i]->extractPacket(buffer[i], size[i]);                  // get as many packets as possible (max is 20)
+          packets++;
+          last = i;
+        }
+      }
+      _first++;
+    }
+
+    if (mode == CLIENT_M)
+    {
+      for (int i = 0; i < 20; i++)
+      {
+        size[i] = socket->ReceivePacket(buffer[i], client);
+        if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+        {
+          packet[i]->extractPacket(buffer[i], size[i]);                  // get as many packets as possible (max is 20)
+          packets++;
+          last = i;
+        }
       }
     }
 
@@ -1030,22 +1135,34 @@ int UDTCore::recv(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
   std::fstream myfile;
   myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
   std::streampos _size = myfile.tellg();
-  if (length < _size)
+  if (_size > length && mode == CLIENT_M)
   {
-    std::cerr << "ERROR-BUFFER DOESN'T CONTAIN ENOUGH MEMORY" << std::endl;
-    return -1;
+    std::cerr << "ERROR-BUFFER INSUFFICIENT" << std::endl;
+    myfile.close();
   }
-  myfile.seekg(0, std::ios::beg);
-  myfile.read(data, _size);
-  myfile.close();
+  else if (_size < length && mode == CLIENT_M)
+  {
+    myfile.seekg(0, std::ios::beg);
+    myfile.read(data, _size);
+    myfile.close();
+  }
+  else if (mode == SERVER_M)
+  {
+    myfile.seekg(0, std::ios::beg);
+    char *data = (char *)malloc((_size+10)*sizeof(char));
+    myfile.read(data, _size);
+    myfile.close();
+    length = _size;
+  }
 
   free(type);
   free(etype);
   free(subseq);
   free(timestamp);
   free(socketID);
-  for (int i = 0; i < 6; i++)
-    free(control_info+i);
+  free(control_info);
   free(c_packet);
+  for (int i = 0; i < 20; i++)
+    free(packet+i);
   return (int)_size;
 }
