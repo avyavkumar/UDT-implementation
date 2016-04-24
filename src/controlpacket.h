@@ -46,7 +46,7 @@ public:
   ControlPacket();
   ~ControlPacket();
 
-  int makePacket(char *final_packet);
+  int makeControlPacket(char *final_packet);
   int extractPacket(char *final_packet);
   ControlPacketType getPacketType();
   int setType(uint32_t *type);

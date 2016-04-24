@@ -180,7 +180,7 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer)
 
   char *s_packet = (char *)malloc(40*sizeof(char));           // buffer for sending the packet
   char *r_packet = (char *)malloc(40*sizeof(char));           // buffer for receiving the packet
-  int _bytes = packet->makePacket(s_packet);
+  int _bytes = packet->makeControlPacket(s_packet);
   int _step = 0;
   uint32_t can_connect = 0;
   do
@@ -237,7 +237,7 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer)
               temp = std::make_pair(UDTCore::hash(rec_packet->getSocketID()), can_connect);
               UDTCore::_successConnect.push_back(temp);
 
-              m_activeConn.push_back(std::make_pair(UDTCore::hash(peer->sin_addr.s_addr), *peer));
+              UDTCore::m_activeConn.push_back(std::make_pair(UDTCore::hash(peer->sin_addr.s_addr), *peer));
               break;
             }
           }
@@ -286,9 +286,9 @@ void UDTCore::listen(UDTSocket *socket, struct sockaddr_in *peer)
     {
       //remove the peer from the list of active connections
       std::vector< std::pair <uint64_t, sockaddr_in> >::iterator it;
-      it = std::find_if(m_activeConn.begin(), m_activeConn.end(), CompareFirstSock(hash(peer->sin_addr.s_addr)));
-      if (it != m_activeConn.end())
-        m_activeConn.erase(it);
+      it = std::find_if(UDTCore::m_activeConn.begin(), UDTCore::m_activeConn.end(), CompareFirstSock(hash(peer->sin_addr.s_addr)));
+      if (it != UDTCore::m_activeConn.end())
+        UDTCore::m_activeConn.erase(it);
     }
   }
   if (getFlag(buffer, size) == DATA)
@@ -374,7 +374,7 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r
               UDTCore::_successConnect.push_back(temp);
 
               // add it to the log of active connections
-              m_activeConn.push_back(std::make_pair(UDTCore::hash(peer->sin_addr.s_addr), *peer));
+              UDTCore::m_activeConn.push_back(std::make_pair(UDTCore::hash(peer->sin_addr.s_addr), *peer));
 
               //send a response packet
               ControlPacket *res_packet = new ControlPacket();
@@ -394,8 +394,8 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r
               controlInfo[1] = socket->getFamily();                            // HS - UDT Socket type - 0 - and 1-
               controlInfo[2] = *subsequence;                                   // HS - random initial seq #
               std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
-              it = std::find_if(_currPacketSize.begin(), _currPacketSize.end(), CompareFirstInt(hash(*socketID)));
-              if (it != _currPacketSize.end())
+              it = std::find_if(UDTCore::_currFlowWindowSize.begin(), UDTCore::_currFlowWindowSize.end(), CompareFirstInt(hash(*socketID)));
+              if (it != UDTCore::_currFlowWindowSize.end())
                 if (control_info[3] > it->second)                           // HS - maximum segment size
                   controlInfo[3] = it->second;
               else
@@ -404,8 +404,8 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r
                 it->second = control_info[3];
               }
 
-              it = std::find_if(_currFlowWindowSize.begin(), _currFlowWindowSize.end(), CompareFirstInt(hash(*socketID)));
-              if (it != _currFlowWindowSize.end())
+              it = std::find_if(UDTCore::_currFlowWindowSize.begin(), UDTCore::_currFlowWindowSize.end(), CompareFirstInt(hash(*socketID)));
+              if (it != UDTCore::_currFlowWindowSize.end())
                 if (control_info[4] > it->second)                           // HS - flow control window size
                   controlInfo[4] = it->second;
               else
@@ -441,7 +441,7 @@ void UDTCore::connect(UDTSocket *socket, const struct sockaddr_in *peer, char *r
               free(socketID);
               free(controlInfo);
               char *s_packet = (char *)malloc(40*sizeof(char));
-              int _bytes_made = res_packet->makePacket(s_packet);
+              int _bytes_made = res_packet->makeControlPacket(s_packet);
               if (_bytes_made == 40)
               {
                 int _bytes_sent = socket->SendPacket(*peer, s_packet, _bytes_made);
@@ -530,7 +530,7 @@ void UDTCore::close(UDTSocket *socket, const struct sockaddr_in *peer)
   free(socketID);
 
   char *s_packet = (char *)malloc(40*sizeof(char));           // buffer for sending the packet
-  int _bytes = packet->makePacket(s_packet);
+  int _bytes = packet->makeControlPacket(s_packet);
   int _step = 0;
   int _sent;
   do
@@ -549,9 +549,9 @@ void UDTCore::close(UDTSocket *socket, const struct sockaddr_in *peer)
 
   //remove the peer from the list of active connections
   std::vector< std::pair <uint64_t, sockaddr_in> >::iterator it;
-  it = std::find_if(m_activeConn.begin(), m_activeConn.end(), CompareFirstSock(hash(peer->sin_addr.s_addr)));
-  if (it != m_activeConn.end())
-    m_activeConn.erase(it);
+  it = std::find_if(UDTCore::m_activeConn.begin(), UDTCore::m_activeConn.end(), CompareFirstSock(hash(peer->sin_addr.s_addr)));
+  if (it != UDTCore::m_activeConn.end())
+    UDTCore::m_activeConn.erase(it);
 }
 
 /****************************************************************************/
@@ -570,12 +570,12 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
     packet[i] = new DataPacket();
   uint32_t total_packets = (len>MAXSIZE)? len/MAXSIZE + ((len%MAXSIZE==0)? 0:1) : 1;
   uint32_t curr_seq = 0;
-  uint32_t *m_sequence = (uint32_t *)malloc(sizeof(uint32_t));
-  uint32_t *m_funcField = (uint32_t *)malloc(sizeof(uint32_t));
-  uint32_t *m_orderBit = (uint32_t *)malloc(sizeof(uint32_t));
-  uint32_t *m_message = (uint32_t *)malloc(sizeof(uint32_t));
-  uint32_t *m_timestamp = (uint32_t *)malloc(sizeof(uint32_t));
-  uint64_t *m_socketID = (uint64_t *)malloc(sizeof(uint64_t));
+  uint32_t *sequence = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *funcField = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *orderBit = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *message = (uint32_t *)malloc(sizeof(uint32_t));
+  uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
+  uint64_t *socketID = (uint64_t *)malloc(sizeof(uint64_t));
   uint32_t packets = 0;
   int len_init, final_length;
   if (total_packets == 1)
@@ -589,15 +589,16 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
   // check the loss list for the socket number
   // if there are some packets, send them first
   std::vector< std::pair <uint64_t, DataPacket> >::iterator it;
-  it = std::find_if(LossList.begin(), LossList.end(), CompareFirstData(hash(socket->getSocketID())));
-  while (it != LossList.end())
+  it = std::find_if(UDTCore::LossList.begin(), UDTCore::LossList.end(), CompareFirstData(hash(socket->getSocketID())));
+  while (it != UDTCore::LossList.end())
   {
     int _size = it->second.getLength();
     char *send_packet = (char *)((16+_size)*sizeof(char));
     it->second.extractPacket(send_packet, 16 + _size);
     if (socket->SendPacket(peer, send_packet, _size + 16) == _size + 16)
-      LossList.erase(it);
-    it = std::find_if(LossList.begin(), LossList.end(), CompareFirstData(hash(socket->getSocketID())));
+      UDTCore::LossList.erase(it);
+    // Need to avait ACK!
+    it = std::find_if(UDTCore::LossList.begin(), UDTCore::LossList.end(), CompareFirstData(hash(socket->getSocketID())));
   }
 
   while (packets < total_packets)
@@ -608,26 +609,26 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
       if (packets < total_packets)
       {
         if (total_packets == 1)
-          *m_funcField = 3;                             // solo packet sent
-        else if (!packets && total_packets > 1)
-          *m_funcField = 2;                             // first packet sent
+          *funcField = 3;                             // solo packet sent
+        else if (packets == 0 && total_packets > 1)
+          *funcField = 2;                             // first packet sent
         else if (packets == total_packets - 1 && total_packets > 1)
-          *m_funcField = 1;                             // last packet sent
+          *funcField = 1;                             // last packet sent
         else
-          *m_funcField = 0;                             // packet sent
+          *funcField = 0;                             // packet sent
 
-        *m_orderBit = 1;                                // in order sending
-        *m_sequence = curr_seq;
-        *m_message = 0xFFFFFFFF;                        // unneeded; this is not a message type
-        *m_timestamp = std::clock();
-        *m_socketID = socket->getSocketID();
+        *orderBit = 1;                                // in order sending
+        *sequence = curr_seq;
+        *message = 0xFFFFFFFF;                        // unneeded; this is not a message type
+        *timestamp = std::clock();
+        *socketID = socket->getSocketID();
 
-        packet[i]->setSequence(m_sequence);
-        packet[i]->setMessage(m_message);
-        packet[i]->setTimestamp(m_timestamp);
-        packet[i]->setfuncField(m_funcField);
-        packet[i]->setOrderBit(m_orderBit);
-        packet[i]->setSocketID(m_socketID);
+        packet[i]->setSequence(sequence);
+        packet[i]->setMessage(message);
+        packet[i]->setTimestamp(timestamp);
+        packet[i]->setfuncField(funcField);
+        packet[i]->setOrderBit(orderBit);
+        packet[i]->setSocketID(socketID);
 
         // set the payload
         int nBytes = 0;
@@ -635,13 +636,12 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
         {
           packet[i]->setPayload(data, len);
           char *final_packet = (char *)malloc((len+16)*sizeof(char));
-          nBytes = packet[i]->makePacket(final_packet);
+          nBytes = packet[i]->makeDataPacket(final_packet);
           if (nBytes != len + 16)
           {
             std::cerr << "ERROR-CORRUPT PACKET WITH SEQUENCE " <<packet[i]->getSequence()<<" AND SOCKETID "<<packet[i]->getSocketID() << std::endl;
             return -1;
           }
-          socket->SendPacket(peer, final_packet, len+16);
           if (socket->SendPacket(peer, final_packet, final_length+16) != nBytes)
           {
             std::cerr << "ERROR-CORRUPT PACKET SENT WITH SEQUENCE " <<packet[i]->getSequence()<<" AND SOCKETID "<<packet[i]->getSocketID() << std::endl;
@@ -655,7 +655,9 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
         {
           packet[i]->setPayload(data+(len_init*packets), final_length);
           char *final_packet = (char *)malloc((final_length+16)*sizeof(char));
-          nBytes = packet[i]->makePacket(final_packet);
+          nBytes = packet[i]->makeDataPacket(final_packet);
+          std::cout << "HERE1" << std::endl;
+          std::cout << nBytes << std::endl;
           if (nBytes != final_length + 16)
           {
             std::cerr << "ERROR-CORRUPT PACKET WITH SEQUENCE " <<packet[i]->getSequence()<<" AND SOCKETID "<<packet[i]->getSocketID() << std::endl;
@@ -668,25 +670,26 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
           }
           packets++;
           curr_seq++;
-          break;
         }
         else
         {
           packet[i]->setPayload(data+(len_init*packets), len_init);
           char *final_packet = (char *)malloc((len_init+16)*sizeof(char));
-          nBytes = packet[i]->makePacket(final_packet);
+          nBytes = packet[i]->makeDataPacket(final_packet);
+          std::cout << "HERE0" << std::endl;
           if (nBytes != len_init + 16)
           {
             std::cerr << "ERROR-CORRUPT PACKET WITH SEQUENCE " <<packet[i]->getSequence()<<" AND SOCKETID "<<packet[i]->getSocketID() << std::endl;
             return -1;
           }
-          socket->SendPacket(peer, final_packet, len_init+16);
-          if (socket->SendPacket(peer, final_packet, final_length+16) != nBytes)
+          int s_size = socket->SendPacket(peer, final_packet, len_init+16);
+          if (s_size != nBytes)
           {
             std::cerr << "ERROR-CORRUPT PACKET SENT WITH SEQUENCE " <<packet[i]->getSequence()<<" AND SOCKETID "<<packet[i]->getSocketID() << std::endl;
             return -1;
           }
           packets++;
+          std::cout << nBytes << std::endl;
           curr_seq++;
         }
       }
@@ -699,12 +702,13 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
     // No response - we retransmit the packets
 
     std::clock_t c_start = std::clock();
-    while (std::clock() - c_start < 20000);                            // Wait for some time for a response
     char *recv_packet = (char *)malloc(40*sizeof(char));
 
     int size = 0;
     struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+    std::cout << "TRYING TO RECEIVE" << std::endl;
     size = socket->ReceivePacket(recv_packet, client);
+    std::cout << "RECEIVED WITH SIZE " << size << std::endl;
     ControlPacket *c_packet = new ControlPacket();
     if (size == -1)
     {
@@ -748,47 +752,47 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
                 {
                   // this is the last datapacket
                   DataPacket temp_packet;
-                  *m_funcField = 1;                               // packet sent
+                  *funcField = 1;                               // packet sent
 
-                  *m_orderBit = 1;                                // in order sending
-                  *m_sequence = (*_seq);
-                  *m_message = 0xFFFFFFFF;                        // unneeded; this is not a message type
-                  *m_timestamp = std::clock();
-                  *m_socketID = socket->getSocketID();
+                  *orderBit = 1;                                // in order sending
+                  *sequence = (*_seq);
+                  *message = 0xFFFFFFFF;                        // unneeded; this is not a message type
+                  *timestamp = std::clock();
+                  *socketID = socket->getSocketID();
 
-                  temp_packet.setSequence(m_sequence);
-                  temp_packet.setMessage(m_message);
-                  temp_packet.setTimestamp(m_timestamp);
-                  temp_packet.setfuncField(m_funcField);
-                  temp_packet.setOrderBit(m_orderBit);
-                  temp_packet.setSocketID(m_socketID);
+                  temp_packet.setSequence(sequence);
+                  temp_packet.setMessage(message);
+                  temp_packet.setTimestamp(timestamp);
+                  temp_packet.setfuncField(funcField);
+                  temp_packet.setOrderBit(orderBit);
+                  temp_packet.setSocketID(socketID);
                   temp_packet.setPayload(data+MAXSIZE*(*_seq), len-(*_seq)*MAXSIZE);
 
                   // add this to loss list
-                  LossList.push_back(std::make_pair(hash(socket->getSocketID()), temp_packet));
+                  UDTCore::LossList.push_back(std::make_pair(hash(socket->getSocketID()), temp_packet));
                 }
                 else
                 {
                   // this is the last datapacket
                   DataPacket temp_packet;
-                  *m_funcField = 0;                               // packet sent
+                  *funcField = 0;                               // packet sent
 
-                  *m_orderBit = 1;                                // in order sending
-                  *m_sequence = (*_seq);
-                  *m_message = 0xFFFFFFFF;                        // unneeded; this is not a message type
-                  *m_timestamp = std::clock();
-                  *m_socketID = socket->getSocketID();
+                  *orderBit = 1;                                // in order sending
+                  *sequence = (*_seq);
+                  *message = 0xFFFFFFFF;                        // unneeded; this is not a message type
+                  *timestamp = std::clock();
+                  *socketID = socket->getSocketID();
 
-                  temp_packet.setSequence(m_sequence);
-                  temp_packet.setMessage(m_message);
-                  temp_packet.setTimestamp(m_timestamp);
-                  temp_packet.setfuncField(m_funcField);
-                  temp_packet.setOrderBit(m_orderBit);
-                  temp_packet.setSocketID(m_socketID);
+                  temp_packet.setSequence(sequence);
+                  temp_packet.setMessage(message);
+                  temp_packet.setTimestamp(timestamp);
+                  temp_packet.setfuncField(funcField);
+                  temp_packet.setOrderBit(orderBit);
+                  temp_packet.setSocketID(socketID);
                   temp_packet.setPayload(data+MAXSIZE*(*_seq), MAXSIZE);
 
                   // add this to loss list
-                  LossList.push_back(std::make_pair(hash(socket->getSocketID()), temp_packet));
+                  UDTCore::LossList.push_back(std::make_pair(hash(socket->getSocketID()), temp_packet));
                 }
               }
               free(_seq);
@@ -801,12 +805,12 @@ int UDTCore::send(UDTSocket *socket, const struct sockaddr_in peer, char* data, 
   }
   for (int i = 0; i < 20; i++)
     free(packet[i]);
-  free(m_sequence);
-  free(m_funcField);
-  free(m_orderBit);
-  free(m_message);
-  free(m_timestamp);
-  free(m_socketID);
+  free(sequence);
+  free(funcField);
+  free(orderBit);
+  free(message);
+  free(timestamp);
+  free(socketID);
   if (packets == total_packets)
     return 1;
 }
@@ -836,13 +840,6 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
     }
 
   DataPacket *packet[20];
-  char *buffer[20];
-  for (int i = 0; i < 20; i++)
-    packet[i] = new DataPacket();
-  for (int i = 0; i < 20; i++)
-    buffer[i] = (char *)malloc((MAXSIZE+16)*sizeof(char));
-  int size[20];
-  int packets = 0;
   ControlPacket *c_packet = new ControlPacket();
   uint32_t *type = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *etype = (uint32_t *)malloc(sizeof(uint32_t));
@@ -850,13 +847,23 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
   uint32_t *timestamp = (uint32_t *)malloc(sizeof(uint32_t));
   uint32_t *control_info = (uint32_t *)malloc(6*sizeof(uint32_t));
   uint64_t *socketID = (uint64_t *)malloc(sizeof(uint64_t));
+  struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+  char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
+  uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
+  char *final_packet = (char *)malloc(40*sizeof(char));
+  char *buffer[20];
+  for (int i = 0; i < 20; i++)
+    packet[i] = new DataPacket();
+  for (int i = 0; i < 20; i++)
+    buffer[i] = (char *)malloc((MAXSIZE+16)*sizeof(char));
+  int size[20];
+  for (int i = 0; i < 20; i++)
+    size[i] = -1;
+  int packets = 0;
   int _first = 0;
   while(1)
   {
-    std::clock_t c_start = std::clock();
-    while (std::clock() - c_start < 20000);                            // Wait for some time for a response
     int last = 0;
-    struct sockaddr_in *client = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 
     if (mode == SERVER_M && _first == 0)
     {
@@ -866,23 +873,30 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
 
       if (size[0] != -1 && getFlag(buffer[0],size[0]) == DATA)
       {
-        packet[0]->extractPacket(buffer[0], size[0]);                  // get packet<0>
+        packet[0]->extractPacket(buffer[0], size[0]);                        // get packet<0>
         packets++;
       }
-      for (int i = 1; i < 20; i++)
+
+      if (packet[0]->getfuncField() != 1 && packet[0]->getfuncField() != 3)  // indicates - not the last packet/ solo packet
       {
-        size[i] = socket->ReceivePacket(buffer[i], client);
-        if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+        for (int i = 1; i < 20; i++)
         {
-          packet[i]->extractPacket(buffer[i], size[i]);                  // get as many packets as possible (max is 20)
-          packets++;
-          last = i;
+          if (packet[last]->getfuncField() != 1 && packet[last]->getfuncField() != 3)  // indicates - not the last packet/ solo packet
+          {
+            size[i] = socket->ReceivePacket(buffer[i], client);
+            if (size[i] != -1 && getFlag(buffer[i],size[i]) == DATA)
+            {
+              packet[i]->extractPacket(buffer[i], size[i]);                    // get as many packets as possible (max is 20)
+              packets++;
+              last = i;
+            }
+          }
         }
       }
       _first++;
     }
 
-    if (mode == CLIENT_M)
+    else if (mode == CLIENT_M || (mode == SERVER_M && _first != 0))
     {
       for (int i = 0; i < 20; i++)
       {
@@ -901,35 +915,44 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
 
     // arrange packets by the sequence numbers received
     DataPacket *temp = new DataPacket();
-    for (int i = 0; i < 20; i++)
+    int flag = 0;
+    for (int i = 0; i < 19; i++)
     {
-      for (int j = 0; j < (20-i); j++)
+      for (int j = 0; j < (20-i-1); j++)
       {
         if (size[j] != -1)                                      // need to ensure that packets have been received
         {
           int k;
           for (k = j+1; k < 20-i; k++)
           {
+            // std::cout << i << " " << j << " " << k << " " << std::endl;
             if (size[k] != -1)
+            {
+              flag++;
               break;
+            }
           }
-          if (packet[j]->getSequence() > packet[k]->getSequence() && k < (20-i))
+          if (flag > 0 && k < 20)
           {
-            temp = packet[j];
-            packet[j] = packet[k];
-            packet[k] = temp;
+            if (packet[j]->getSequence() > packet[k]->getSequence() && k < (20-i))
+            {
+              temp = packet[j];
+              packet[j] = packet[k];
+              packet[k] = temp;
+              flag = 0;
+            }
           }
         }
       }
     }
-    free(temp);
+
     if (packets == 20 && packet[19]->getfuncField() == 1)
     {
       // everything okay, send an ACK signal, it is the last packet
       // the congestion control stuff has been skipped for now
       std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
-      it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
-      if (it->second + 1 == packet[0]->getSequence() && it != m_LRSN.end())
+      it = std::find_if(UDTCore::m_LRSN.begin(), UDTCore::m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+      if (it->second + 1 == packet[0]->getSequence() && it != UDTCore::m_LRSN.end())
       {
         *type = ACK;
         *etype = 0xFFFFFFFF;
@@ -945,8 +968,7 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
         c_packet->setTimestamp(timestamp);
         c_packet->setSocketID(socketID);
 
-        char *final_packet = (char *)malloc(40*sizeof(char));
-        int length = c_packet->makePacket(final_packet);
+        int length = c_packet->makeControlPacket(final_packet);
         int _step = 0;
         while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
         if (_step >= 20)
@@ -954,9 +976,8 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
           std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
           return -1;
         }
-        m_LRSN.erase(it);
-        m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
-        free(final_packet);
+        UDTCore::m_LRSN.erase(it);
+        UDTCore::m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
       }
       // we have sent the ACK, now we need to write the information to buffer
       // to do so, we create a binary file, and dump all the contents into that file
@@ -967,10 +988,8 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
       {
         if (size[i] != -1)
         {
-          char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
           int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
           myfile << s_buffer;
-          free(s_buffer);
         }
       }
       myfile.close();
@@ -982,8 +1001,8 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
       // send an ACK signal, it is not the last packet
       // the congestion control stuff has been skipped for now
       std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
-      it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
-      if (it->second + 1 == packet[0]->getSequence() && it != m_LRSN.end())
+      it = std::find_if(UDTCore::m_LRSN.begin(), UDTCore::m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+      if (it->second + 1 == packet[0]->getSequence() && it != UDTCore::m_LRSN.end())
       {
         *type = ACK;
         *etype = 0xFFFFFFFF;
@@ -999,8 +1018,7 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
         c_packet->setTimestamp(timestamp);
         c_packet->setSocketID(socketID);
 
-        char *final_packet = (char *)malloc(40*sizeof(char));
-        int length = c_packet->makePacket(final_packet);
+        int length = c_packet->makeControlPacket(final_packet);
         int _step = 0;
         while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
         if (_step >= 20)
@@ -1008,9 +1026,8 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
           std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
           return -1;
         }
-        m_LRSN.erase(it);
-        m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
-        free(final_packet);
+        UDTCore::m_LRSN.erase(it);
+        UDTCore::m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
       }
       // packets received are in order
       // to do so, we create a binary file, and dump all the contents into that file
@@ -1021,10 +1038,8 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
       {
         if (size[i] != -1)
         {
-          char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
           int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
           myfile << s_buffer;
-          free(s_buffer);
         }
       }
       myfile.close();
@@ -1032,13 +1047,13 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
 
     else if (packets < 20 && packets > 0)
     {
-      if (packet[last]->getfuncField() == 1)
+      if (packet[last]->getfuncField() == 1 || packet[last]->getfuncField() == 3)
       {
         std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
-        it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
-        if (it != m_LRSN.end())
+        it = std::find_if(UDTCore::m_LRSN.begin(), UDTCore::m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+        // Record exists of the socket
+        if (it != UDTCore::m_LRSN.end())
         {
-          uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
           *last_seq = it->second;
           if (*last_seq + packets == packet[last]->getSequence())
           {
@@ -1050,7 +1065,7 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
             *subseq = 0xFFFFFFFF;                                    // subsequence is inconsequential
             *timestamp = std::clock();
             *socketID = socket->getSocketID();
-            control_info[0] = packet[19]->getSequence();             // last data packet sequence found
+            control_info[0] = packet[last]->getSequence();             // last data packet sequence found
 
             c_packet->setType(type);
             c_packet->setExtendedType(etype);
@@ -1058,8 +1073,7 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
             c_packet->setControlInfo(ACK, control_info);
             c_packet->setTimestamp(timestamp);
             c_packet->setSocketID(socketID);
-            char *final_packet = (char *)malloc(40*sizeof(char));
-            int length = c_packet->makePacket(final_packet);
+            int length = c_packet->makeControlPacket(final_packet);
             int _step = 0;
             while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
             if (_step >= 20)
@@ -1067,10 +1081,74 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
               std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
               return -1;
             }
-            m_LRSN.erase(it);
-            m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
-            free(final_packet);
+            UDTCore::m_LRSN.erase(it);
+            UDTCore::m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
+            // we have sent the ACK, now we need to write the information to buffer
+            // to do so, we create a binary file, and dump all the contents into that file
+            // once the contents have been transferred and read, the file is removed
+            std::fstream myfile;
+            myfile.open("write-in.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::app);
+            for (int i = 0; i < 20; i++)
+            {
+              if (size[i] != -1)
+              {
+                int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
+                myfile << s_buffer;
+              }
+            }
+            myfile.close();
           }
+          else
+          {
+            std::cerr << "ERROR-MISSING PACKETS; ABORTING" << std::endl;
+            return -1;
+          }
+        }
+        // Record doesn't exist within the server
+        else
+        {
+          *type = ACK;
+          *etype = 0xFFFFFFFF;
+          *subseq = 0xFFFFFFFF;                                      // subsequence is inconsequential
+          *timestamp = std::clock();
+          *socketID = socket->getSocketID();
+          control_info[0] = packet[last]->getSequence();             // last data packet sequence found
+          for (int i = 1; i < 6; i++)
+            control_info[i] = 0;
+
+          ControlPacket n_packet;
+          n_packet.setType(type);
+          n_packet.setExtendedType(etype);
+          n_packet.setSubsequence(subseq);
+          n_packet.setControlInfo(ACK, control_info);
+          n_packet.setTimestamp(timestamp);
+          n_packet.setSocketID(socketID);
+          std::cout << "here #1" << std::endl;
+          std::cout << n_packet.getType() << std::endl;
+          std::cout << n_packet.getExtendedType() << std::endl;
+          std::cout << n_packet.getTimestamp() << std::endl;
+          std::cout << n_packet.getSubsequence() << std::endl;
+          std::cout << n_packet.getSocketID() << std::endl;
+          int wer;
+          n_packet.getControlInfo(control_info, wer);
+          for (int i = 0; i < wer; i++)
+            std::cout << control_info[i] << std::endl;
+          int p_length = n_packet.makeControlPacket(final_packet);
+          std::cout << "here #2" << std::endl;
+
+          int _step = 0;
+          while (_step < 20)
+          {
+            int p_sent = socket->SendPacket(peer, final_packet, p_length);
+            if (p_sent == -1)
+              p_sent = socket->SendPacket(peer, final_packet, p_length);
+          }
+          if (_step >= 20)
+          {
+            std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
+            return -1;
+          }
+          UDTCore::m_LRSN.push_back(std::make_pair(hash(socket->getSocketID()), control_info[0]));
           // we have sent the ACK, now we need to write the information to buffer
           // to do so, we create a binary file, and dump all the contents into that file
           // once the contents have been transferred and read, the file is removed
@@ -1080,23 +1158,20 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
           {
             if (size[i] != -1)
             {
-              char *s_buffer = (char *)malloc(MAXSIZE*sizeof(char));
               int p_size = packet[i]->getPayload(s_buffer, MAXSIZE);
               myfile << s_buffer;
-              free(s_buffer);
             }
           }
           myfile.close();
         }
         break;
       }
-      else if (packet[last]->getfuncField() != 1)
+      else
       {
         std::vector< std::pair <uint64_t, uint32_t> >::iterator it;
-        it = std::find_if(m_LRSN.begin(), m_LRSN.end(), CompareFirstInt(hash(*socketID)));
-        if (it != m_LRSN.end())
+        it = std::find_if(UDTCore::m_LRSN.begin(), UDTCore::m_LRSN.end(), CompareFirstInt(hash(*socketID)));
+        if (it != UDTCore::m_LRSN.end())
         {
-          uint32_t *last_seq = (uint32_t *)malloc(sizeof(uint32_t));
           *last_seq = it->second;
           // send a NAK till the last packet received
           // check the difference with the LRSN value
@@ -1117,8 +1192,7 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
             c_packet->setTimestamp(timestamp);
             c_packet->setSocketID(socketID);
 
-            char *final_packet = (char *)malloc(40*sizeof(char));
-            int length = c_packet->makePacket(final_packet);
+            int length = c_packet->makeControlPacket(final_packet);
             int _step = 0;
             while ( (socket->SendPacket(peer, final_packet, length) == -1) && (_step++ < 20));
             if (_step >= 20)
@@ -1126,7 +1200,6 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
               std::cerr << "ERROR-COULDN'T SEND ACK" << std::endl;
               return -1;
             }
-            free(final_packet);
           }
         }
       }
@@ -1142,27 +1215,18 @@ int UDTCore::recv(int mode, UDTSocket *socket, const struct sockaddr_in peer, ch
   }
   else if (_size < length && mode == CLIENT_M)
   {
+    char *x_data = (char *)malloc(_size*sizeof(char));
     myfile.seekg(0, std::ios::beg);
-    myfile.read(data, _size);
+    myfile.read(x_data, _size);
     myfile.close();
   }
   else if (mode == SERVER_M)
   {
+    char *x_data = (char *)malloc(_size*sizeof(char));
     myfile.seekg(0, std::ios::beg);
-    char *data = (char *)malloc((_size+10)*sizeof(char));
-    myfile.read(data, _size);
+    myfile.read(x_data, _size);
     myfile.close();
     length = _size;
   }
-
-  free(type);
-  free(etype);
-  free(subseq);
-  free(timestamp);
-  free(socketID);
-  free(control_info);
-  free(c_packet);
-  for (int i = 0; i < 20; i++)
-    free(packet+i);
   return (int)_size;
 }

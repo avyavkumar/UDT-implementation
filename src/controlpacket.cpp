@@ -71,11 +71,13 @@ ControlPacket::~ControlPacket() {}
 /*      All the fields must be defined, otherwise NULL will be returned     */
 /****************************************************************************/
 
-int ControlPacket::makePacket(char *final_packet)
+int ControlPacket::makeControlPacket(char *final_packet)
 {
-  if (!m_type || !m_extendedtype || !m_timestamp || !m_subsequence || !m_socketID)
+  if (!m_type || !m_extendedtype || !m_timestamp || !m_subsequence || !m_socketID || !final_packet)
+  {
+    std::cout << "ERR-MAKE PACKET" << std::endl;
     return -1;
-
+  }
   // set the type as data; make the first bit of the packet 1
   // make the next 15 bits the type
   // set the next 16 bits as the extended user defined extended type
@@ -93,7 +95,7 @@ int ControlPacket::makePacket(char *final_packet)
   layers[0] = *temp_1;
   layers[1] = *m_subsequence;
   layers[2] = *m_timestamp;
-  layers[3] = *m_socketID;
+  layers[3] = *m_socketID & 0xFFFFFFFF;
 
   std::bitset <320> tempo_0 (layers[0]);
   std::bitset <320> tempo_1 (layers[1]);
@@ -102,8 +104,16 @@ int ControlPacket::makePacket(char *final_packet)
 
   free(temp_1);
   free(temp_2);
+  // std::cout << "HERE #1" << std::endl;
+  // std::cout << *m_type << std::endl;
+  // std::cout << *m_extendedtype << std::endl;
+  // std::cout << *m_timestamp << std::endl;
+  // std::cout << *m_subsequence << std::endl;
+  // std::cout << *m_socketID << std::endl;
+  // std::cout << *m_packetSeq << std::endl;
+  // std::cout << "HERE #2" << std::endl;
 
-  if (getPacketType() == ACK)
+  if (this->getPacketType() == ACK)
   {
     layers[4] = *m_packetSeq;
     layers[5] = *m_RTT;
@@ -144,7 +154,7 @@ int ControlPacket::makePacket(char *final_packet)
       *(final_packet + i) = *(m_packet + i);
     return length;
   }
-  else if (getPacketType() == HANDSHAKE)
+  else if (this->getPacketType() == HANDSHAKE)
   {
     layers[4] = *m_Version;
     layers[5] = *m_Type;
@@ -186,7 +196,7 @@ int ControlPacket::makePacket(char *final_packet)
     return length;
   }
 
-  else if (getPacketType() == NAK)
+  else if (this->getPacketType() == NAK)
   {
     layers[4] = *m_LossInfo;
 
@@ -224,7 +234,7 @@ int ControlPacket::makePacket(char *final_packet)
     return length;
   }
 
-  else if (getPacketType() == DropRequest)
+  else if (this->getPacketType() == DropRequest)
   {
     layers[4] = *m_firstMessage;
     layers[5] = *m_lastMessage;

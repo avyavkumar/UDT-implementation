@@ -73,7 +73,7 @@ int DataPacket::getLength()
 /*      All the fields must be defined, otherwise NULL will be returned     */
 /****************************************************************************/
 
-int DataPacket::makePacket(char *final_packet)
+int DataPacket::makeDataPacket(char *final_packet)
 {
   if (!m_sequence || !m_message || !m_timestamp || !m_packetData || !m_orderBit || !m_funcField || !m_socketID)
     return -1;

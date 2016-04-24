@@ -30,7 +30,7 @@ public:
   ~DataPacket();
 
   int getLength();
-  int makePacket(char *final_packet);
+  int makeDataPacket(char *final_packet);
   int setPayload(char *pData, int length);
   int setSequence(uint32_t *sequence);
   int setMessage(uint32_t *message);
